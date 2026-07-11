@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0a0a0a">
+    <title>Бюджет Дани и Коти</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, sans-serif; background: #0a0a0a; color: #e0e0e0; padding: 15px; min-height: 100vh; -webkit-tap-highlight-color: transparent; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .header { text-align: center; padding: 20px 0; }
+        .header h1 { font-size: 22px; color: #fff; }
+        .header p { color: #ff2d55; font-size: 12px; margin-top: 4px; }
+        
+        .sync-bar { background: #141414; border: 1px solid #2a2a2a; border-radius: 12px; padding: 12px 15px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; font-size: 12px; }
+        .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #4a9e6e; animation: pulse 2s infinite; flex-shrink: 0; }
+        .sync-dot.off { background: #f44; }
+        .sync-dot.load { background: #ff0; animation: pulse 0.5s infinite; }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .sync-text { color: #888; flex: 1; }
+        
+        .balance { background: #141414; border: 1px solid #c41e3a; border-radius: 16px; padding: 20px; text-align: center; margin-bottom: 15px; }
+        .balance .big { font-size: 36px; font-weight: 800; color: #fff; }
+        .balance .row { display: flex; justify-content: space-around; margin-top: 15px; padding-top: 15px; border-top: 1px solid #222; }
+        .balance .val { font-size: 16px; font-weight: 700; }
+        .balance .lbl { font-size: 10px; color: #888; }
+        
+        .persons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .p-card { padding: 15px; border-radius: 12px; text-align: center; }
+        .p-danya { background: rgba(74,158,255,0.1); border: 1px solid rgba(74,158,255,0.3); }
+        .p-kotya { background: rgba(255,105,180,0.1); border: 1px solid rgba(255,105,180,0.3); }
+        .p-card .name { font-size: 14px; font-weight: 600; margin-bottom: 5px; }
+        .p-card .stat { font-size: 12px; margin: 2px 0; }
+        
+        .quick { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .q-btn { padding: 18px; border-radius: 14px; border: 2px solid #222; background: #141414; text-align: center; cursor: pointer; font-size: 15px; font-weight: 600; }
+        .q-btn .emoji { font-size: 30px; display: block; margin-bottom: 5px; }
+        .q-btn:active { transform: scale(0.95); border-color: #c41e3a; }
+        
+        .form { display: none; background: #141414; border: 1px solid #222; border-radius: 14px; padding: 20px; margin-bottom: 15px; }
+        .form.on { display: block; }
+        .form h3 { text-align: center; margin-bottom: 15px; }
+        .fg { margin-bottom: 12px; }
+        .fg label { display: block; font-size: 12px; color: #888; margin-bottom: 4px; }
+        .fg input, .fg select { width: 100%; padding: 14px; background: #0a0a0a; border: 2px solid #222; border-radius: 10px; color: #fff; font-size: 16px; -webkit-appearance: none; }
+        .pick { display: flex; gap: 8px; margin-bottom: 12px; }
+        .pick button { flex: 1; padding: 12px; border: 2px solid #222; background: transparent; color: #888; border-radius: 10px; font-size: 14px; cursor: pointer; }
+        .pick .on-danya { border-color: #4a9eff; color: #4a9eff; background: rgba(74,158,255,0.1); }
+        .pick .on-kotya { border-color: #ff69b4; color: #ff69b4; background: rgba(255,105,180,0.1); }
+        .sb { width: 100%; padding: 16px; border: none; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; color: #fff; }
+        .sb:active { transform: scale(0.97); }
+        .cancel { width: 100%; padding: 12px; background: none; border: 1px solid #222; color: #888; border-radius: 10px; margin-top: 8px; cursor: pointer; }
+        
+        .list { background: #141414; border: 1px solid #222; border-radius: 14px; overflow: hidden; }
+        .item { display: flex; align-items: center; padding: 12px 15px; border-bottom: 1px solid #1a1a1a; gap: 10px; }
+        .item:last-child { border: none; }
+        .ic { font-size: 24px; }
+        .inf { flex: 1; }
+        .nm { font-size: 14px; }
+        .mt { font-size: 11px; color: #666; margin-top: 2px; }
+        .am { font-size: 15px; font-weight: 700; }
+        .green { color: #4a9e6e; }
+        .red { color: #ff6b6b; }
+        .gold { color: #d4a574; }
+        .tag { display: inline-block; padding: 1px 6px; border-radius: 6px; font-size: 9px; margin-right: 4px; }
+        .td { background: rgba(74,158,255,0.2); color: #4a9eff; }
+        .tk { background: rgba(255,105,180,0.2); color: #ff69b4; }
+        .empty { text-align: center; padding: 40px; color: #666; }
+        .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 12px 24px; border-radius: 25px; font-size: 14px; opacity: 0; transition: .3s; pointer-events: none; z-index: 999; }
+        .toast.show { opacity: 1; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⛓️ Бюджет Дани и Коти</h1>
+            <p>Автосинхронизация</p>
+        </div>
+
+        <div class="sync-bar">
+            <div class="sync-dot" id="syncDot"></div>
+            <span class="sync-text" id="syncText">Загрузка...</span>
+        </div>
+
+        <div class="balance">
+            <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:2px;">💰 Доступно</div>
+            <div class="big" id="totalBalance">0 ₽</div>
+            <div class="row">
+                <div><div class="val" id="dailyBudget" style="color:#ff6b6b;">0 ₽</div><div class="lbl">На сегодня</div></div>
+                <div><div class="val" id="savingsAmount" style="color:#d4a574;">0 ₽</div><div class="lbl">Накопления</div></div>
+            </div>
+        </div>
+
+        <div class="persons">
+            <div class="p-card p-danya">
+                <div class="name" style="color:#4a9eff;">👤 Даня</div>
+                <div class="stat" style="color:#4a9e6e;">+<span id="danyaIncome">0</span> ₽</div>
+                <div class="stat" style="color:#ff6b6b;">-<span id="danyaExpense">0</span> ₽</div>
+            </div>
+            <div class="p-card p-kotya">
+                <div class="name" style="color:#ff69b4;">👤 Котя</div>
+                <div class="stat" style="color:#4a9e6e;">+<span id="kotyaIncome">0</span> ₽</div>
+                <div class="stat" style="color:#ff6b6b;">-<span id="kotyaExpense">0</span> ₽</div>
+            </div>
+        </div>
+
+        <div class="quick">
+            <div class="q-btn" style="color:#4a9e6e;" onclick="showForm('income')"><span class="emoji">💸</span>Доход</div>
+            <div class="q-btn" style="color:#ff6b6b;" onclick="showForm('expense')"><span class="emoji">🛒</span>Расход</div>
+        </div>
+
+        <div class="form" id="addForm">
+            <h3 id="formTitle">Добавить</h3>
+            <div class="pick">
+                <button id="personDanya" class="on-danya" onclick="setPerson('Даня')">👤 Даня</button>
+                <button id="personKotya" onclick="setPerson('Котя')">👤 Котя</button>
+            </div>
+            <div class="fg"><label>Сумма (₽)</label><input type="number" id="formAmount" placeholder="0" inputmode="numeric"></div>
+            <div class="fg" id="categoryGroup" style="display:none;"><label>Категория</label><select id="formCategory"><option value="еда">🍜 Еда</option><option value="одежда">👘 Одежда</option><option value="транспорт">🚃 Транспорт</option><option value="прочие">🗂️ Прочее</option></select></div>
+            <div class="fg"><label>Описание</label><input type="text" id="formDescription" placeholder="Откуда / на что..."></div>
+            <button class="sb" id="submitBtn" onclick="submitForm()">Записать</button>
+            <button class="cancel" onclick="hideForm()">Отмена</button>
+        </div>
+
+        <div class="list" id="transactionList"><div class="empty">Загрузка...</div></div>
+    </div>
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ============ НАСТРОЙКА (замени токен) ============
+        const TOKEN = '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';
+        const USER = 'lolzoff6412';
+        const REPO = 'budget';
+        const FILE = 'data.json';
+        const API = `https://api.github.com/repos/${USER}/${REPO}/contents/${FILE}`;
+        
+        let transactions = [];
+        let savingsTotal = 0;
+        let currentForm = 'income';
+        let selectedPerson = 'Даня';
+        let fileSHA = null;
+
+        // Загрузка из облака
+        async function loadCloud() {
+            setStatus('load', 'Загрузка...');
+            try {
+                const r = await fetch(API, { headers: { 'Authorization': 'Bearer ' + TOKEN } });
+                if (r.ok) {
+                    const d = await r.json();
+                    fileSHA = d.sha;
+                    const c = JSON.parse(atob(d.content));
+                    transactions = c.transactions || [];
+                    savingsTotal = c.savingsTotal || 0;
+                    setStatus('on', 'Синхронизировано');
+                } else {
+                    transactions = [];
+                    savingsTotal = 0;
+                    setStatus('on', 'Новый бюджет');
+                }
+            } catch (e) {
+                setStatus('off', 'Офлайн');
+            }
+            updateUI();
+        }
+
+        // Сохранение в облако
+        async function saveCloud() {
+            setStatus('load', 'Сохранение...');
+            const content = btoa(unescape(encodeURIComponent(JSON.stringify({ transactions, savingsTotal }))));
+            const body = { message: 'update', content, branch: 'main' };
+            if (fileSHA) body.sha = fileSHA;
+            
+            try {
+                const r = await fetch(API, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': 'Bearer ' + TOKEN,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(body)
+                });
+                if (r.ok) {
+                    const d = await r.json();
+                    fileSHA = d.content.sha;
+                    setStatus('on', 'Сохранено ✅');
+                }
+            } catch (e) {
+                setStatus('off', 'Офлайн');
+            }
+        }
+
+        function setStatus(s, t) {
+            const dot = document.getElementById('syncDot');
+            dot.className = 'sync-dot' + (s === 'off' ? ' off' : s === 'load' ? ' load' : '');
+            document.getElementById('syncText').textContent = t;
+        }
+
+        function showForm(type) {
+            currentForm = type;
+            document.getElementById('addForm').classList.add('on');
+            document.getElementById('formTitle').textContent = type === 'income' ? '💸 Доход' : '🛒 Расход';
+            document.getElementById('categoryGroup').style.display = type === 'expense' ? 'block' : 'none';
+            const btn = document.getElementById('submitBtn');
+            btn.style.background = type === 'income' ? '#4a9e6e' : '#ff6b6b';
+            btn.textContent = type === 'income' ? '💸 Записать доход' : '🛒 Записать расход';
+            document.getElementById('formAmount').value = '';
+            document.getElementById('formDescription').value = '';
+            setTimeout(() => document.getElementById('formAmount').focus(), 100);
+        }
+
+        function hideForm() { document.getElementById('addForm').classList.remove('on'); }
+        
+        function setPerson(p) {
+            selectedPerson = p;
+            document.getElementById('personDanya').className = p === 'Даня' ? 'on-danya' : '';
+            document.getElementById('personKotya').className = p === 'Котя' ? 'on-kotya' : '';
+        }
+
+        async function submitForm() {
+            const amount = parseFloat(document.getElementById('formAmount').value);
+            const desc = document.getElementById('formDescription').value.trim();
+            if (!amount || amount <= 0) return alert('Введи сумму!');
+
+            if (currentForm === 'income') {
+                transactions.push({ id: Date.now(), type: 'income', amount, description: desc || 'Доход', person: selectedPerson, date: new Date().toISOString() });
+                const s15 = Math.round(amount * 0.15);
+                if (s15 > 0 && confirm('Отложить ' + s15.toLocaleString() + ' ₽ (15%)?')) {
+                    transactions.push({ id: Date.now()+1, type: 'savings', amount: s15, description: 'Авто-накопление', person: selectedPerson, date: new Date().toISOString() });
+                    savingsTotal += s15;
+                }
+            } else {
+                const cat = document.getElementById('formCategory').value;
+                const bal = transactions.reduce((s,t) => t.type === 'income' ? s + t.amount : s - t.amount, 0);
+                if (amount > bal) return alert('Недостаточно средств!');
+                transactions.push({ id: Date.now(), type: 'expense', amount, category: cat, description: desc || 'Расход', person: selectedPerson, date: new Date().toISOString() });
+            }
+            
+            await saveCloud();
+            updateUI();
+            hideForm();
+            showToast('✅ Записано!');
+        }
+
+        async function deleteTransaction(id) {
+            if (!confirm('Удалить?')) return;
+            const t = transactions.find(x => x.id === id);
+            if (t && t.type === 'savings') { savingsTotal -= t.amount; if (savingsTotal < 0) savingsTotal = 0; }
+            transactions = transactions.filter(x => x.id !== id);
+            await saveCloud();
+            updateUI();
+            showToast('🗑️ Удалено');
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg; t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2500);
+        }
+
+        function updateUI() {
+            const bal = transactions.reduce((s,t) => t.type === 'income' ? s + t.amount : s - t.amount, 0);
+            const now = new Date();
+            const lastDay = new Date(now.getFullYear(), now.getMonth()+1, 0);
+            const daysLeft = Math.ceil((lastDay - now) / (1000*60*60*24)) || 1;
+
+            document.getElementById('totalBalance').textContent = bal.toLocaleString() + ' ₽';
+            document.getElementById('dailyBudget').textContent = Math.round(bal / daysLeft).toLocaleString() + ' ₽';
+            document.getElementById('savingsAmount').textContent = savingsTotal.toLocaleString() + ' ₽';
+
+            let di=0,de=0,ki=0,ke=0;
+            transactions.forEach(t => {
+                if (t.person === 'Даня') { if (t.type === 'income') di+=t.amount; else de+=t.amount; }
+                else { if (t.type === 'income') ki+=t.amount; else ke+=t.amount; }
+            });
+            document.getElementById('danyaIncome').textContent = di.toLocaleString();
+            document.getElementById('danyaExpense').textContent = de.toLocaleString();
+            document.getElementById('kotyaIncome').textContent = ki.toLocaleString();
+            document.getElementById('kotyaExpense').textContent = ke.toLocaleString();
+
+            const list = document.getElementById('transactionList');
+            if (!transactions.length) {
+                list.innerHTML = '<div class="empty">Пока нет записей</div>';
+            } else {
+                list.innerHTML = [...transactions].sort((a,b) => new Date(b.date) - new Date(a.date)).map(t => {
+                    const icon = t.type === 'income' ? '💸' : t.type === 'savings' ? '🔒' : { 'еда':'🍜','одежда':'👘','транспорт':'🚃','прочие':'🗂️' }[t.category] || '📦';
+                    const sign = t.type === 'income' ? '+' : '-';
+                    const cls = t.type === 'income' ? 'green' : 'red';
+                    const tag = t.person === 'Даня' ? '<span class="tag td">Д</span>' : '<span class="tag tk">К</span>';
+                    const d = new Date(t.date);
+                    const ds = d.getDate()+'.'+(d.getMonth()+1)+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+                    return `<div class="item">
+                        <div class="ic">${icon}</div>
+                        <div class="inf"><div class="nm">${t.description}</div><div class="mt">${tag} ${ds}</div></div>
+                        <div class="am ${cls}">${sign} ${t.amount.toLocaleString()} ₽</div>
+                        <div style="cursor:pointer;color:#666;padding:5px;" onclick="deleteTransaction(${t.id})">✕</div>
+                    </div>`;
+                }).join('');
+            }
+        }
+
+        // Загружаем при открытии
+        loadCloud();
+    </script>
+</body>
+</html>
