@@ -5,146 +5,263 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#0a0a0a">
-    <title>Бюджет Дани и Коти</title>
+    <title>Бюджет Дани и Коти | 支配の予算</title>
     <style>
+        :root {
+            --bg: #0a0a0a; --panel: #1a1a1a; --text: #e0e0e0; --accent: #c41e3a;
+            --accent-light: #ff2d55; --gold: #d4a574; --white: #ffffff;
+            --card-bg: #141414; --border: #2a2a2a; --success: #4a9e6e;
+            --danger: #c41e3a; --danya: #4a9eff; --kotya: #ff69b4;
+        }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, sans-serif; background: #0a0a0a; color: #e0e0e0; padding: 15px; min-height: 100vh; -webkit-tap-highlight-color: transparent; }
-        .container { max-width: 600px; margin: 0 auto; }
-        .header { text-align: center; padding: 20px 0; }
-        .header h1 { font-size: 22px; color: #fff; }
-        .header p { color: #ff2d55; font-size: 12px; margin-top: 4px; }
-        
-        .sync-bar { background: #141414; border: 1px solid #2a2a2a; border-radius: 12px; padding: 12px 15px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; font-size: 12px; }
-        .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #4a9e6e; animation: pulse 2s infinite; flex-shrink: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg); color: var(--text); min-height: 100vh;
+            padding: 15px; padding-bottom: 100px; -webkit-tap-highlight-color: transparent;
+        }
+        .container { max-width: 800px; margin: 0 auto; }
+        .header { text-align: center; padding: 20px 0; margin-bottom: 15px; }
+        .header h1 { font-size: 24px; color: var(--white); letter-spacing: 1px; }
+        .header .subtitle { font-size: 12px; color: var(--accent-light); margin-top: 4px; }
+        .sync-panel {
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 12px; padding: 12px 15px; margin-bottom: 15px;
+            display: flex; align-items: center; gap: 10px; font-size: 12px; flex-wrap: wrap;
+        }
+        .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #4a9e6e; flex-shrink: 0; }
         .sync-dot.off { background: #f44; }
         .sync-dot.load { background: #ff0; animation: pulse 0.5s infinite; }
         @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
-        .sync-text { color: #888; flex: 1; }
-        
-        .balance { background: #141414; border: 1px solid #c41e3a; border-radius: 16px; padding: 20px; text-align: center; margin-bottom: 15px; }
-        .balance .big { font-size: 36px; font-weight: 800; color: #fff; }
-        .balance .row { display: flex; justify-content: space-around; margin-top: 15px; padding-top: 15px; border-top: 1px solid #222; }
-        .balance .val { font-size: 16px; font-weight: 700; }
-        .balance .lbl { font-size: 10px; color: #888; }
-        
-        .persons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        .p-card { padding: 15px; border-radius: 12px; text-align: center; }
-        .p-danya { background: rgba(74,158,255,0.1); border: 1px solid rgba(74,158,255,0.3); }
-        .p-kotya { background: rgba(255,105,180,0.1); border: 1px solid rgba(255,105,180,0.3); }
-        .p-card .name { font-size: 14px; font-weight: 600; margin-bottom: 5px; }
-        .p-card .stat { font-size: 12px; margin: 2px 0; }
-        
-        .quick { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        .q-btn { padding: 18px; border-radius: 14px; border: 2px solid #222; background: #141414; text-align: center; cursor: pointer; font-size: 15px; font-weight: 600; }
-        .q-btn .emoji { font-size: 30px; display: block; margin-bottom: 5px; }
-        .q-btn:active { transform: scale(0.95); border-color: #c41e3a; }
-        
-        .form { display: none; background: #141414; border: 1px solid #222; border-radius: 14px; padding: 20px; margin-bottom: 15px; }
-        .form.on { display: block; }
-        .form h3 { text-align: center; margin-bottom: 15px; }
-        .fg { margin-bottom: 12px; }
-        .fg label { display: block; font-size: 12px; color: #888; margin-bottom: 4px; }
-        .fg input, .fg select { width: 100%; padding: 14px; background: #0a0a0a; border: 2px solid #222; border-radius: 10px; color: #fff; font-size: 16px; -webkit-appearance: none; }
-        .pick { display: flex; gap: 8px; margin-bottom: 12px; }
-        .pick button { flex: 1; padding: 12px; border: 2px solid #222; background: transparent; color: #888; border-radius: 10px; font-size: 14px; cursor: pointer; }
-        .pick .on-danya { border-color: #4a9eff; color: #4a9eff; background: rgba(74,158,255,0.1); }
-        .pick .on-kotya { border-color: #ff69b4; color: #ff69b4; background: rgba(255,105,180,0.1); }
-        .sb { width: 100%; padding: 16px; border: none; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; color: #fff; }
-        .sb:active { transform: scale(0.97); }
-        .cancel { width: 100%; padding: 12px; background: none; border: 1px solid #222; color: #888; border-radius: 10px; margin-top: 8px; cursor: pointer; }
-        
-        .list { background: #141414; border: 1px solid #222; border-radius: 14px; overflow: hidden; }
-        .item { display: flex; align-items: center; padding: 12px 15px; border-bottom: 1px solid #1a1a1a; gap: 10px; }
-        .item:last-child { border: none; }
-        .ic { font-size: 24px; }
-        .inf { flex: 1; }
-        .nm { font-size: 14px; }
-        .mt { font-size: 11px; color: #666; margin-top: 2px; }
-        .am { font-size: 15px; font-weight: 700; }
-        .green { color: #4a9e6e; }
-        .red { color: #ff6b6b; }
-        .gold { color: #d4a574; }
-        .tag { display: inline-block; padding: 1px 6px; border-radius: 6px; font-size: 9px; margin-right: 4px; }
-        .td { background: rgba(74,158,255,0.2); color: #4a9eff; }
-        .tk { background: rgba(255,105,180,0.2); color: #ff69b4; }
-        .empty { text-align: center; padding: 40px; color: #666; }
+        .sync-text { color: #888; flex: 1; font-size: 11px; }
+        .alerts-bar { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        .alert {
+            padding: 10px 15px; border-radius: 8px; font-size: 12px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .alert-danger { background: rgba(196,30,58,0.2); border: 1px solid var(--danger); color: #ff6b6b; }
+        .alert-warning { background: rgba(212,167,116,0.2); border: 1px solid var(--gold); color: var(--gold); }
+        .balance-card {
+            background: linear-gradient(135deg, rgba(196,30,58,0.2), rgba(20,20,20,0.98));
+            border: 1px solid var(--accent); border-radius: 16px;
+            padding: 20px; margin-bottom: 15px; text-align: center;
+        }
+        .balance-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 2px; }
+        .balance-amount { font-size: 36px; font-weight: 800; color: #fff; }
+        .balance-row {
+            display: flex; justify-content: space-around;
+            margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .balance-value { font-size: 16px; font-weight: 700; }
+        .balance-sub { font-size: 10px; color: #888; margin-top: 2px; }
+        .person-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .person-card { padding: 15px; border-radius: 12px; text-align: center; }
+        .person-danya { background: rgba(74,158,255,0.1); border: 1px solid rgba(74,158,255,0.3); }
+        .person-kotya { background: rgba(255,105,180,0.1); border: 1px solid rgba(255,105,180,0.3); }
+        .person-name { font-size: 15px; font-weight: 600; margin-bottom: 5px; }
+        .person-stat { font-size: 13px; margin: 2px 0; }
+        .quick-buttons { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .quick-btn {
+            padding: 16px; border-radius: 14px; border: 2px solid var(--border);
+            background: var(--card-bg); text-align: center; cursor: pointer;
+            font-size: 14px; font-weight: 600;
+        }
+        .quick-btn:active { transform: scale(0.95); border-color: var(--accent); }
+        .quick-btn .emoji { font-size: 28px; display: block; margin-bottom: 4px; }
+        .btn-income { color: var(--success); }
+        .btn-expense { color: #ff6b6b; }
+        .btn-savings { color: var(--gold); }
+        .tabs { display: flex; gap: 2px; background: var(--card-bg); border-radius: 12px; padding: 3px; margin-bottom: 15px; }
+        .tab {
+            flex: 1; padding: 12px; text-align: center; font-size: 13px;
+            color: #888; border-radius: 10px; cursor: pointer; border: none; background: transparent;
+        }
+        .tab.active { background: var(--accent); color: #fff; font-weight: 600; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .panel { background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; padding: 20px; margin-bottom: 15px; }
+        .panel-title { font-size: 16px; font-weight: 600; color: var(--white); margin-bottom: 15px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 12px; color: #888; margin-bottom: 4px; }
+        .form-group input, .form-group select {
+            width: 100%; padding: 14px; background: #0a0a0a; border: 2px solid var(--border);
+            border-radius: 10px; color: #fff; font-size: 16px; -webkit-appearance: none;
+        }
+        .person-toggle { display: flex; gap: 8px; margin-bottom: 12px; }
+        .person-toggle button {
+            flex: 1; padding: 12px; border: 2px solid var(--border);
+            background: transparent; color: #888; border-radius: 10px; font-size: 14px; cursor: pointer;
+        }
+        .person-toggle button.active-danya { border-color: var(--danya); color: var(--danya); background: rgba(74,158,255,0.1); }
+        .person-toggle button.active-kotya { border-color: var(--kotya); color: var(--kotya); background: rgba(255,105,180,0.1); }
+        .btn {
+            width: 100%; padding: 14px; border: none; border-radius: 10px;
+            font-size: 15px; font-weight: 700; cursor: pointer; color: #fff;
+        }
+        .btn:active { transform: scale(0.97); }
+        .btn-gold { background: var(--gold); color: #000; }
+        .btn-red { background: var(--accent); }
+        .btn-green { background: var(--success); }
+        .btn-sm { width: auto; padding: 8px 16px; font-size: 12px; display: inline-block; }
+        .transaction-list { background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+        .transaction-item {
+            display: flex; align-items: center; padding: 12px 15px;
+            border-bottom: 1px solid #1a1a1a; gap: 10px;
+        }
+        .transaction-item:last-child { border-bottom: none; }
+        .t-icon { font-size: 24px; min-width: 30px; text-align: center; }
+        .t-info { flex: 1; min-width: 0; }
+        .t-name { font-size: 14px; font-weight: 500; }
+        .t-meta { font-size: 11px; color: #666; margin-top: 2px; }
+        .t-tag { display: inline-block; padding: 1px 6px; border-radius: 6px; font-size: 9px; margin-right: 4px; }
+        .tag-danya { background: rgba(74,158,255,0.2); color: #4a9eff; }
+        .tag-kotya { background: rgba(255,105,180,0.2); color: #ff69b4; }
+        .t-amount { font-size: 15px; font-weight: 700; white-space: nowrap; }
+        .positive { color: var(--success); }
+        .negative { color: #ff6b6b; }
+        .savings-color { color: var(--gold); }
+        .t-delete { background: none; border: none; color: #666; font-size: 16px; padding: 6px; cursor: pointer; }
+        .t-delete:active { color: #ff6b6b; }
+        .empty-state { text-align: center; padding: 40px; color: #666; }
+        .goal-item { background: #0a0a0a; border: 1px solid var(--border); border-radius: 10px; padding: 15px; margin-bottom: 10px; }
+        .goal-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+        .goal-name { font-weight: 600; }
+        .goal-bar { height: 8px; background: #0a0a0a; border-radius: 4px; overflow: hidden; margin-bottom: 5px; }
+        .goal-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--accent-light)); border-radius: 4px; }
+        .goal-meta { font-size: 11px; color: #666; display: flex; justify-content: space-between; }
+        .payment-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #1a1a1a; flex-wrap: wrap; gap: 5px; }
+        .payment-name { font-size: 13px; }
+        .payment-date { font-size: 11px; color: #666; }
+        .payment-amount { font-weight: 600; }
+        .payment-status { padding: 3px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
+        .status-paid { background: rgba(74,158,110,0.2); color: var(--success); }
+        .status-pending { background: rgba(212,167,116,0.2); color: var(--gold); }
+        .status-overdue { background: rgba(196,30,58,0.2); color: var(--danger); }
+        .category-bar { margin-bottom: 12px; }
+        .category-header { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 13px; }
+        .bar-container { height: 6px; background: #0a0a0a; border-radius: 3px; overflow: hidden; }
+        .bar-fill { height: 100%; border-radius: 3px; }
+        .bar-food { background: #ff6b6b; }
+        .bar-clothes { background: #a29bfe; }
+        .bar-transport { background: #74b9ff; }
+        .bar-other { background: #636e72; }
         .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 12px 24px; border-radius: 25px; font-size: 14px; opacity: 0; transition: .3s; pointer-events: none; z-index: 999; }
         .toast.show { opacity: 1; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #0a0a0a; }
+        ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 2px; }
+        @media (max-width: 600px) {
+            .quick-buttons { grid-template-columns: 1fr 1fr; }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>⛓️ Бюджет Дани и Коти</h1>
-            <p>Автосинхронизация</p>
+            <div class="subtitle">Синхронизация работает</div>
         </div>
 
-        <div class="sync-bar">
+        <div class="sync-panel">
             <div class="sync-dot" id="syncDot"></div>
             <span class="sync-text" id="syncText">Загрузка...</span>
+            <button class="btn btn-sm btn-red" onclick="location.reload()">🔄</button>
         </div>
 
-        <div class="balance">
-            <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:2px;">💰 Доступно</div>
-            <div class="big" id="totalBalance">0 ₽</div>
-            <div class="row">
-                <div><div class="val" id="dailyBudget" style="color:#ff6b6b;">0 ₽</div><div class="lbl">На сегодня</div></div>
-                <div><div class="val" id="savingsAmount" style="color:#d4a574;">0 ₽</div><div class="lbl">Накопления</div></div>
+        <div class="alerts-bar" id="alertsBar"></div>
+
+        <div class="balance-card">
+            <div class="balance-label">💰 Доступно</div>
+            <div class="balance-amount" id="totalBalance">0 ₽</div>
+            <div class="balance-row">
+                <div><div class="balance-value" id="dailyBudget" style="color:#ff6b6b;">0 ₽</div><div class="balance-sub">На сегодня</div></div>
+                <div><div class="balance-value" id="savingsAmount" style="color:var(--gold);">0 ₽</div><div class="balance-sub">Накопления</div></div>
             </div>
         </div>
 
-        <div class="persons">
-            <div class="p-card p-danya">
-                <div class="name" style="color:#4a9eff;">👤 Даня</div>
-                <div class="stat" style="color:#4a9e6e;">+<span id="danyaIncome">0</span> ₽</div>
-                <div class="stat" style="color:#ff6b6b;">-<span id="danyaExpense">0</span> ₽</div>
+        <div class="person-row">
+            <div class="person-card person-danya">
+                <div class="person-name" style="color:var(--danya);">👤 Даня</div>
+                <div class="person-stat" style="color:var(--success);">+<span id="danyaIncome">0</span> ₽</div>
+                <div class="person-stat" style="color:#ff6b6b;">-<span id="danyaExpense">0</span> ₽</div>
             </div>
-            <div class="p-card p-kotya">
-                <div class="name" style="color:#ff69b4;">👤 Котя</div>
-                <div class="stat" style="color:#4a9e6e;">+<span id="kotyaIncome">0</span> ₽</div>
-                <div class="stat" style="color:#ff6b6b;">-<span id="kotyaExpense">0</span> ₽</div>
+            <div class="person-card person-kotya">
+                <div class="person-name" style="color:var(--kotya);">👤 Котя</div>
+                <div class="person-stat" style="color:var(--success);">+<span id="kotyaIncome">0</span> ₽</div>
+                <div class="person-stat" style="color:#ff6b6b;">-<span id="kotyaExpense">0</span> ₽</div>
             </div>
         </div>
 
-        <div class="quick">
-            <div class="q-btn" style="color:#4a9e6e;" onclick="showForm('income')"><span class="emoji">💸</span>Доход</div>
-            <div class="q-btn" style="color:#ff6b6b;" onclick="showForm('expense')"><span class="emoji">🛒</span>Расход</div>
+        <div class="quick-buttons">
+            <div class="quick-btn btn-income" onclick="showForm('income')"><span class="emoji">💸</span>Доход</div>
+            <div class="quick-btn btn-expense" onclick="showForm('expense')"><span class="emoji">🛒</span>Расход</div>
+            <div class="quick-btn btn-savings" onclick="showForm('savings')"><span class="emoji">🔒</span>Копилка</div>
         </div>
 
-        <div class="form" id="addForm">
-            <h3 id="formTitle">Добавить</h3>
-            <div class="pick">
-                <button id="personDanya" class="on-danya" onclick="setPerson('Даня')">👤 Даня</button>
+        <div class="panel" id="addForm" style="display:none;">
+            <div class="panel-title" id="formTitle">Добавить</div>
+            <div class="person-toggle">
+                <button id="personDanya" class="active-danya" onclick="setPerson('Даня')">👤 Даня</button>
                 <button id="personKotya" onclick="setPerson('Котя')">👤 Котя</button>
             </div>
-            <div class="fg"><label>Сумма (₽)</label><input type="number" id="formAmount" placeholder="0" inputmode="numeric"></div>
-            <div class="fg" id="categoryGroup" style="display:none;"><label>Категория</label><select id="formCategory"><option value="еда">🍜 Еда</option><option value="одежда">👘 Одежда</option><option value="транспорт">🚃 Транспорт</option><option value="прочие">🗂️ Прочее</option></select></div>
-            <div class="fg"><label>Описание</label><input type="text" id="formDescription" placeholder="Откуда / на что..."></div>
-            <button class="sb" id="submitBtn" onclick="submitForm()">Записать</button>
-            <button class="cancel" onclick="hideForm()">Отмена</button>
+            <div class="form-group"><label>Сумма (₽)</label><input type="number" id="formAmount" placeholder="0" inputmode="numeric"></div>
+            <div class="form-group" id="categoryGroup" style="display:none;"><label>Категория</label><select id="formCategory"><option value="еда">🍜 Еда</option><option value="одежда">👘 Одежда</option><option value="транспорт">🚃 Транспорт</option><option value="прочие">🗂️ Прочее</option></select></div>
+            <div class="form-group"><label>Описание</label><input type="text" id="formDescription" placeholder="Откуда / на что..."></div>
+            <button class="btn" id="submitBtn" onclick="submitForm()">Записать</button>
+            <button class="btn" style="background:transparent;border:1px solid var(--border);color:#888;margin-top:8px;" onclick="hideForm()">Отмена</button>
         </div>
 
-        <div class="list" id="transactionList"><div class="empty">Загрузка...</div></div>
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('history')">📋 История</button>
+            <button class="tab" onclick="switchTab('analytics')">📊 Аналитика</button>
+            <button class="tab" onclick="switchTab('goals')">🎯 Цели</button>
+            <button class="tab" onclick="switchTab('payments')">📅 Платежи</button>
+        </div>
+
+        <div class="tab-content active" id="tab-history">
+            <div class="transaction-list" id="transactionList"><div class="empty-state">Пока нет записей</div></div>
+        </div>
+
+        <div class="tab-content" id="tab-analytics">
+            <div class="panel">
+                <div class="panel-title">📊 Расходы по категориям</div>
+                <div id="analyticsContent"></div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="tab-goals">
+            <div class="panel">
+                <div class="panel-title">🎯 Цели</div>
+                <div class="form-group"><label>Название</label><input type="text" id="goalName" placeholder="Отпуск, техника..."></div>
+                <div class="form-group"><label>Сумма (₽)</label><input type="number" id="goalAmount" placeholder="100000" inputmode="numeric"></div>
+                <button class="btn btn-gold" onclick="addGoal()">Добавить цель</button>
+                <div id="goalsList" style="margin-top:15px;"></div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="tab-payments">
+            <div class="panel">
+                <div class="panel-title">📅 Обязательные платежи</div>
+                <div class="form-group"><label>Название</label><input type="text" id="paymentName" placeholder="Аренда, кредит..."></div>
+                <div class="form-group"><label>Сумма (₽)</label><input type="number" id="paymentAmount" placeholder="30000" inputmode="numeric"></div>
+                <div class="form-group"><label>День месяца</label><input type="number" id="paymentDay" placeholder="15" min="1" max="31" inputmode="numeric"></div>
+                <button class="btn btn-red" onclick="addPayment()">Добавить</button>
+                <div id="paymentsList" style="margin-top:15px;"></div>
+            </div>
+        </div>
     </div>
+
     <div class="toast" id="toast"></div>
 
     <script>
-        // ============ НАСТРОЙКА (замени токен) ============
         const TOKEN = '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';
-        const USER = 'lolzoff6412';
-        const REPO = 'budget';
-        const FILE = 'data.json';
-        const API = `https://api.github.com/repos/${USER}/${REPO}/contents/${FILE}`;
+        const API = 'https://api.github.com/repos/lolzoff6412/budget/contents/data.json';
         
-        let transactions = [];
-        let savingsTotal = 0;
-        let currentForm = 'income';
-        let selectedPerson = 'Даня';
-        let fileSHA = null;
+        let transactions = [], savingsTotal = 0, goals = [], payments = [];
+        let fileSHA = null, currentForm = 'income', selectedPerson = 'Даня';
 
-        // Загрузка из облака
         async function loadCloud() {
-            setStatus('load', 'Загрузка...');
+            document.getElementById('syncText').textContent = 'Загрузка...';
+            document.getElementById('syncDot').className = 'sync-dot load';
             try {
                 const r = await fetch(API, { headers: { 'Authorization': 'Bearer ' + TOKEN } });
                 if (r.ok) {
@@ -153,69 +270,73 @@
                     const c = JSON.parse(atob(d.content));
                     transactions = c.transactions || [];
                     savingsTotal = c.savingsTotal || 0;
-                    setStatus('on', 'Синхронизировано');
-                } else {
-                    transactions = [];
-                    savingsTotal = 0;
-                    setStatus('on', 'Новый бюджет');
+                    goals = c.goals || [];
+                    payments = c.payments || [];
+                    document.getElementById('syncDot').className = 'sync-dot';
+                    document.getElementById('syncText').textContent = 'Синхронизировано ✅';
                 }
             } catch (e) {
-                setStatus('off', 'Офлайн');
+                document.getElementById('syncDot').className = 'sync-dot off';
+                document.getElementById('syncText').textContent = 'Офлайн';
             }
             updateUI();
         }
 
-        // Сохранение в облако
         async function saveCloud() {
-            setStatus('load', 'Сохранение...');
-            const content = btoa(unescape(encodeURIComponent(JSON.stringify({ transactions, savingsTotal }))));
+            document.getElementById('syncText').textContent = 'Сохранение...';
+            const data = { transactions, savingsTotal, goals, payments };
+            const content = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
             const body = { message: 'update', content, branch: 'main' };
             if (fileSHA) body.sha = fileSHA;
-            
             try {
                 const r = await fetch(API, {
                     method: 'PUT',
-                    headers: {
-                        'Authorization': 'Bearer ' + TOKEN,
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Authorization': 'Bearer ' + TOKEN, 'Content-Type': 'application/json' },
                     body: JSON.stringify(body)
                 });
                 if (r.ok) {
                     const d = await r.json();
                     fileSHA = d.content.sha;
-                    setStatus('on', 'Сохранено ✅');
+                    document.getElementById('syncDot').className = 'sync-dot';
+                    document.getElementById('syncText').textContent = 'Сохранено ✅';
                 }
             } catch (e) {
-                setStatus('off', 'Офлайн');
+                document.getElementById('syncDot').className = 'sync-dot off';
+                document.getElementById('syncText').textContent = 'Офлайн';
             }
         }
 
-        function setStatus(s, t) {
-            const dot = document.getElementById('syncDot');
-            dot.className = 'sync-dot' + (s === 'off' ? ' off' : s === 'load' ? ' load' : '');
-            document.getElementById('syncText').textContent = t;
+        function getRemainingDays() {
+            const now = new Date();
+            const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            return Math.ceil((lastDay - now) / (1000 * 60 * 60 * 24)) || 1;
+        }
+
+        function calculateBalance() {
+            return transactions.reduce((s, t) => t.type === 'income' ? s + t.amount : s - t.amount, 0);
         }
 
         function showForm(type) {
             currentForm = type;
-            document.getElementById('addForm').classList.add('on');
-            document.getElementById('formTitle').textContent = type === 'income' ? '💸 Доход' : '🛒 Расход';
+            document.getElementById('addForm').style.display = 'block';
+            document.getElementById('formTitle').textContent = type === 'income' ? '💸 Доход' : type === 'savings' ? '🔒 Копилка' : '🛒 Расход';
             document.getElementById('categoryGroup').style.display = type === 'expense' ? 'block' : 'none';
             const btn = document.getElementById('submitBtn');
-            btn.style.background = type === 'income' ? '#4a9e6e' : '#ff6b6b';
-            btn.textContent = type === 'income' ? '💸 Записать доход' : '🛒 Записать расход';
+            if (type === 'income') { btn.className = 'btn btn-green'; btn.textContent = '💸 Записать доход'; }
+            else if (type === 'savings') { btn.className = 'btn btn-gold'; btn.textContent = '🔒 Отложить'; }
+            else { btn.className = 'btn btn-red'; btn.textContent = '🛒 Записать расход'; }
             document.getElementById('formAmount').value = '';
             document.getElementById('formDescription').value = '';
             setTimeout(() => document.getElementById('formAmount').focus(), 100);
+            document.getElementById('addForm').scrollIntoView({ behavior: 'smooth' });
         }
 
-        function hideForm() { document.getElementById('addForm').classList.remove('on'); }
-        
+        function hideForm() { document.getElementById('addForm').style.display = 'none'; }
+
         function setPerson(p) {
             selectedPerson = p;
-            document.getElementById('personDanya').className = p === 'Даня' ? 'on-danya' : '';
-            document.getElementById('personKotya').className = p === 'Котя' ? 'on-kotya' : '';
+            document.getElementById('personDanya').className = p === 'Даня' ? 'active-danya' : '';
+            document.getElementById('personKotya').className = p === 'Котя' ? 'active-kotya' : '';
         }
 
         async function submitForm() {
@@ -226,17 +347,21 @@
             if (currentForm === 'income') {
                 transactions.push({ id: Date.now(), type: 'income', amount, description: desc || 'Доход', person: selectedPerson, date: new Date().toISOString() });
                 const s15 = Math.round(amount * 0.15);
-                if (s15 > 0 && confirm('Отложить ' + s15.toLocaleString() + ' ₽ (15%)?')) {
-                    transactions.push({ id: Date.now()+1, type: 'savings', amount: s15, description: 'Авто-накопление', person: selectedPerson, date: new Date().toISOString() });
+                if (s15 > 0 && confirm('💡 Отложить ' + s15.toLocaleString() + ' ₽ (15%) в накопления?')) {
+                    transactions.push({ id: Date.now()+1, type: 'savings', amount: s15, description: 'Авто-накопление 15%', person: selectedPerson, date: new Date().toISOString() });
                     savingsTotal += s15;
                 }
-            } else {
+            } else if (currentForm === 'expense') {
                 const cat = document.getElementById('formCategory').value;
-                const bal = transactions.reduce((s,t) => t.type === 'income' ? s + t.amount : s - t.amount, 0);
-                if (amount > bal) return alert('Недостаточно средств!');
+                const bal = calculateBalance();
+                if (amount > bal) return alert('❌ Недостаточно средств! Доступно: ' + bal.toLocaleString() + ' ₽');
                 transactions.push({ id: Date.now(), type: 'expense', amount, category: cat, description: desc || 'Расход', person: selectedPerson, date: new Date().toISOString() });
+            } else if (currentForm === 'savings') {
+                const bal = calculateBalance();
+                if (amount > bal) return alert('❌ Недостаточно средств!');
+                transactions.push({ id: Date.now(), type: 'savings', amount, description: desc || 'Накопление', person: selectedPerson, date: new Date().toISOString() });
+                savingsTotal += amount;
             }
-            
             await saveCloud();
             updateUI();
             hideForm();
@@ -244,7 +369,7 @@
         }
 
         async function deleteTransaction(id) {
-            if (!confirm('Удалить?')) return;
+            if (!confirm('Удалить запись?')) return;
             const t = transactions.find(x => x.id === id);
             if (t && t.type === 'savings') { savingsTotal -= t.amount; if (savingsTotal < 0) savingsTotal = 0; }
             transactions = transactions.filter(x => x.id !== id);
@@ -253,54 +378,165 @@
             showToast('🗑️ Удалено');
         }
 
+        function addGoal() {
+            const name = document.getElementById('goalName').value.trim();
+            const amount = parseFloat(document.getElementById('goalAmount').value);
+            if (!name || !amount || amount <= 0) return alert('Заполни все поля!');
+            goals.push({ id: Date.now(), name, target: amount, saved: 0 });
+            document.getElementById('goalName').value = '';
+            document.getElementById('goalAmount').value = '';
+            saveCloud();
+            updateUI();
+        }
+
+        function addToGoal(id) {
+            const goal = goals.find(g => g.id === id);
+            if (!goal) return;
+            const amount = parseFloat(prompt('Сколько отложить на цель «' + goal.name + '»?'));
+            if (!amount || amount <= 0) return;
+            if (amount > calculateBalance()) return alert('Недостаточно средств!');
+            goal.saved += amount;
+            transactions.push({ id: Date.now(), type: 'savings', amount, description: 'Цель: ' + goal.name, person: 'Даня', date: new Date().toISOString() });
+            savingsTotal += amount;
+            saveCloud();
+            updateUI();
+        }
+
+        function deleteGoal(id) { goals = goals.filter(g => g.id !== id); saveCloud(); updateUI(); }
+
+        function addPayment() {
+            const name = document.getElementById('paymentName').value.trim();
+            const amount = parseFloat(document.getElementById('paymentAmount').value);
+            const day = parseInt(document.getElementById('paymentDay').value);
+            if (!name || !amount || !day || day < 1 || day > 31) return alert('Заполни все поля!');
+            payments.push({ id: Date.now(), name, amount, day, paid: false });
+            document.getElementById('paymentName').value = '';
+            document.getElementById('paymentAmount').value = '';
+            document.getElementById('paymentDay').value = '';
+            saveCloud();
+            updateUI();
+        }
+
+        function togglePayment(id) {
+            const p = payments.find(x => x.id === id);
+            if (p) { p.paid = !p.paid; saveCloud(); updateUI(); }
+        }
+
+        function deletePayment(id) { payments = payments.filter(p => p.id !== id); saveCloud(); updateUI(); }
+
+        function switchTab(name) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            const tabs = { 'history': 0, 'analytics': 1, 'goals': 2, 'payments': 3 };
+            document.querySelectorAll('.tab')[tabs[name]].classList.add('active');
+            document.getElementById('tab-' + name).classList.add('active');
+        }
+
         function showToast(msg) {
             const t = document.getElementById('toast');
             t.textContent = msg; t.classList.add('show');
-            setTimeout(() => t.classList.remove('show'), 2500);
+            setTimeout(() => t.classList.remove('show'), 2000);
         }
 
         function updateUI() {
-            const bal = transactions.reduce((s,t) => t.type === 'income' ? s + t.amount : s - t.amount, 0);
-            const now = new Date();
-            const lastDay = new Date(now.getFullYear(), now.getMonth()+1, 0);
-            const daysLeft = Math.ceil((lastDay - now) / (1000*60*60*24)) || 1;
+            const bal = calculateBalance();
+            const daysLeft = getRemainingDays();
+            const daily = bal / daysLeft;
 
             document.getElementById('totalBalance').textContent = bal.toLocaleString() + ' ₽';
-            document.getElementById('dailyBudget').textContent = Math.round(bal / daysLeft).toLocaleString() + ' ₽';
+            document.getElementById('dailyBudget').textContent = Math.round(daily).toLocaleString() + ' ₽';
             document.getElementById('savingsAmount').textContent = savingsTotal.toLocaleString() + ' ₽';
 
-            let di=0,de=0,ki=0,ke=0;
+            let di = 0, de = 0, ki = 0, ke = 0;
             transactions.forEach(t => {
-                if (t.person === 'Даня') { if (t.type === 'income') di+=t.amount; else de+=t.amount; }
-                else { if (t.type === 'income') ki+=t.amount; else ke+=t.amount; }
+                if (t.person === 'Даня') { if (t.type === 'income') di += t.amount; else de += t.amount; }
+                else { if (t.type === 'income') ki += t.amount; else ke += t.amount; }
             });
             document.getElementById('danyaIncome').textContent = di.toLocaleString();
             document.getElementById('danyaExpense').textContent = de.toLocaleString();
             document.getElementById('kotyaIncome').textContent = ki.toLocaleString();
             document.getElementById('kotyaExpense').textContent = ke.toLocaleString();
 
+            // Алерты
+            const alertsBar = document.getElementById('alertsBar');
+            let alertsHTML = '';
+            const today = new Date().getDate();
+            payments.forEach(p => {
+                if (!p.paid && p.day <= today + 3 && p.day >= today) alertsHTML += `<div class="alert alert-warning">⚠️ Скоро: ${p.name} ${p.amount.toLocaleString()} ₽</div>`;
+                if (!p.paid && p.day < today) alertsHTML += `<div class="alert alert-danger">❌ Просрочен: ${p.name}</div>`;
+            });
+            if (daily < 300 && bal > 0) alertsHTML += `<div class="alert alert-danger">⚠️ Дневной лимит: ${Math.round(daily).toLocaleString()} ₽</div>`;
+            alertsBar.innerHTML = alertsHTML;
+
+            // История
             const list = document.getElementById('transactionList');
             if (!transactions.length) {
-                list.innerHTML = '<div class="empty">Пока нет записей</div>';
+                list.innerHTML = '<div class="empty-state">Пока нет записей</div>';
             } else {
-                list.innerHTML = [...transactions].sort((a,b) => new Date(b.date) - new Date(a.date)).map(t => {
-                    const icon = t.type === 'income' ? '💸' : t.type === 'savings' ? '🔒' : { 'еда':'🍜','одежда':'👘','транспорт':'🚃','прочие':'🗂️' }[t.category] || '📦';
+                list.innerHTML = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date)).map(t => {
+                    const icon = t.type === 'income' ? '💸' : t.type === 'savings' ? '🔒' : { 'еда': '🍜', 'одежда': '👘', 'транспорт': '🚃', 'прочие': '🗂️' }[t.category] || '📦';
                     const sign = t.type === 'income' ? '+' : '-';
-                    const cls = t.type === 'income' ? 'green' : 'red';
-                    const tag = t.person === 'Даня' ? '<span class="tag td">Д</span>' : '<span class="tag tk">К</span>';
+                    const cls = t.type === 'income' ? 'positive' : t.type === 'savings' ? 'savings-color' : 'negative';
+                    const tag = t.person === 'Даня' ? '<span class="t-tag tag-danya">Даня</span>' : '<span class="t-tag tag-kotya">Котя</span>';
                     const d = new Date(t.date);
-                    const ds = d.getDate()+'.'+(d.getMonth()+1)+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
-                    return `<div class="item">
-                        <div class="ic">${icon}</div>
-                        <div class="inf"><div class="nm">${t.description}</div><div class="mt">${tag} ${ds}</div></div>
-                        <div class="am ${cls}">${sign} ${t.amount.toLocaleString()} ₽</div>
-                        <div style="cursor:pointer;color:#666;padding:5px;" onclick="deleteTransaction(${t.id})">✕</div>
+                    const ds = d.getDate() + '.' + (d.getMonth() + 1) + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+                    return `<div class="transaction-item">
+                        <div class="t-icon">${icon}</div>
+                        <div class="t-info"><div class="t-name">${t.description}</div><div class="t-meta">${tag} ${ds}</div></div>
+                        <div class="t-amount ${cls}">${sign} ${t.amount.toLocaleString()} ₽</div>
+                        <button class="t-delete" onclick="deleteTransaction(${t.id})">✕</button>
                     </div>`;
                 }).join('');
             }
+
+            // Аналитика
+            const cats = { 'еда': 0, 'одежда': 0, 'транспорт': 0, 'прочие': 0 };
+            let totalExp = 0;
+            transactions.forEach(t => { if (t.type === 'expense' && cats.hasOwnProperty(t.category)) { cats[t.category] += t.amount; totalExp += t.amount; } });
+            const maxCat = Math.max(...Object.values(cats), 1);
+            const icons = { 'еда': '🍜', 'одежда': '👘', 'транспорт': '🚃', 'прочие': '🗂️' };
+            document.getElementById('analyticsContent').innerHTML = Object.entries(cats).map(([k, v]) => `
+                <div class="category-bar">
+                    <div class="category-header"><span>${icons[k]} ${k}</span><span>${v.toLocaleString()} ₽</span></div>
+                    <div class="bar-container"><div class="bar-fill bar-${k === 'еда' ? 'food' : k === 'одежда' ? 'clothes' : k === 'транспорт' ? 'transport' : 'other'}" style="width:${(v/maxCat*100)}%"></div></div>
+                </div>
+            `).join('') + `<div style="text-align:right;margin-top:10px;color:#888;">Всего: ${totalExp.toLocaleString()} ₽</div>`;
+
+            // Цели
+            const goalsList = document.getElementById('goalsList');
+            goalsList.innerHTML = goals.length ? goals.map(g => {
+                const pct = Math.min((g.saved / g.target) * 100, 100);
+                const daysToGoal = daily > 0 ? Math.ceil((g.target - g.saved) / (daily * 0.3)) : '∞';
+                return `<div class="goal-item">
+                    <div class="goal-header"><span class="goal-name">🎯 ${g.name}</span><span>${g.saved.toLocaleString()} / ${g.target.toLocaleString()} ₽</span></div>
+                    <div class="goal-bar"><div class="goal-fill" style="width:${pct}%"></div></div>
+                    <div class="goal-meta"><span>${Math.round(pct)}%</span><span>~${daysToGoal} дн.</span></div>
+                    <button class="btn btn-gold btn-sm" style="margin-top:8px;" onclick="addToGoal(${g.id})">+ Пополнить</button>
+                    <button class="btn btn-sm" style="margin-top:5px;background:transparent;border:1px solid var(--border);color:#888;" onclick="deleteGoal(${g.id})">Удалить</button>
+                </div>`;
+            }).join('') : '<div class="empty-state">Нет целей</div>';
+
+            // Платежи
+            const paymentsList = document.getElementById('paymentsList');
+            const today2 = new Date().getDate();
+            paymentsList.innerHTML = payments.length ? payments.sort((a, b) => a.day - b.day).map(p => {
+                let cls = 'status-pending', txt = 'Ожидает';
+                if (p.paid) { cls = 'status-paid'; txt = 'Оплачен'; }
+                else if (p.day < today2) { cls = 'status-overdue'; txt = 'Просрочен'; }
+                return `<div class="payment-item">
+                    <div><div class="payment-name">${p.name}</div><div class="payment-date">${p.day} число</div></div>
+                    <div class="payment-amount">${p.amount.toLocaleString()} ₽</div>
+                    <span class="payment-status ${cls}">${txt}</span>
+                    <button class="btn btn-sm" style="width:auto;padding:4px 8px;font-size:11px;" onclick="togglePayment(${p.id})">✓</button>
+                    <button class="t-delete" onclick="deletePayment(${p.id})">✕</button>
+                </div>`;
+            }).join('') : '<div class="empty-state">Нет платежей</div>';
         }
 
-        // Загружаем при открытии
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && document.getElementById('addForm').style.display === 'block') submitForm();
+        });
+
         loadCloud();
     </script>
 </body>
