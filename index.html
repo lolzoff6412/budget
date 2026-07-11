@@ -2,10 +2,9 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#0a0a0a">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Бюджет Дани и Коти | 支配の予算</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root {
             --bg: #0a0a0a; --panel: #1a1a1a; --text: #e0e0e0; --accent: #c41e3a;
@@ -15,253 +14,265 @@
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: var(--bg); color: var(--text); min-height: 100vh;
-            padding: 15px; padding-bottom: 100px; -webkit-tap-highlight-color: transparent;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            background-image: radial-gradient(circle at 20% 50%, rgba(196,30,58,0.08) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(196,30,58,0.05) 0%, transparent 50%);
+            color: var(--text); min-height: 100vh; padding: 20px; padding-bottom: 100px;
         }
-        .container { max-width: 800px; margin: 0 auto; }
-        .header { text-align: center; padding: 20px 0; margin-bottom: 15px; }
-        .header h1 { font-size: 24px; color: var(--white); letter-spacing: 1px; }
-        .header .subtitle { font-size: 12px; color: var(--accent-light); margin-top: 4px; }
-        .sync-panel {
-            background: var(--card-bg); border: 1px solid var(--border);
-            border-radius: 12px; padding: 12px 15px; margin-bottom: 15px;
-            display: flex; align-items: center; gap: 10px; font-size: 12px; flex-wrap: wrap;
+        .container { max-width: 1400px; margin: 0 auto; }
+        .header {
+            background: linear-gradient(135deg, rgba(20,20,20,0.98) 0%, rgba(10,10,10,0.98) 100%);
+            border: 1px solid var(--border); border-radius: 12px; padding: 25px 30px;
+            margin-bottom: 20px; position: relative; overflow: hidden;
         }
-        .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #4a9e6e; flex-shrink: 0; }
+        .header::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent), var(--gold), var(--accent), transparent);
+        }
+        .header-content { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; }
+        .title-block h1 { font-size: 28px; font-weight: 700; color: var(--white); letter-spacing: 2px; }
+        .title-block .jp-title { font-size: 14px; color: var(--accent-light); letter-spacing: 3px; }
+        .quote { font-size: 13px; color: #888; font-style: italic; border-left: 2px solid var(--accent); padding-left: 15px; max-width: 400px; }
+        .salary-dates { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+        .salary-date { background: rgba(196,30,58,0.15); border: 1px solid rgba(196,30,58,0.3); color: var(--accent-light); padding: 5px 14px; border-radius: 20px; font-size: 12px; }
+        .sync-bar { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 15px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .sync-info { display: flex; align-items: center; gap: 10px; color: #888; font-size: 13px; }
+        .sync-status { display: flex; align-items: center; gap: 8px; }
+        .sync-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--success); animation: pulse 2s infinite; }
         .sync-dot.off { background: #f44; }
         .sync-dot.load { background: #ff0; animation: pulse 0.5s infinite; }
-        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
-        .sync-text { color: #888; flex: 1; font-size: 11px; }
-        .alerts-bar { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
-        .alert {
-            padding: 10px 15px; border-radius: 8px; font-size: 12px;
-            display: flex; align-items: center; gap: 8px;
-        }
+        @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.5;} }
+        .alerts-bar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .alert { padding: 10px 15px; border-radius: 8px; font-size: 12px; display: flex; align-items: center; gap: 8px; }
         .alert-danger { background: rgba(196,30,58,0.2); border: 1px solid var(--danger); color: #ff6b6b; }
         .alert-warning { background: rgba(212,167,116,0.2); border: 1px solid var(--gold); color: var(--gold); }
-        .balance-card {
-            background: linear-gradient(135deg, rgba(196,30,58,0.2), rgba(20,20,20,0.98));
-            border: 1px solid var(--accent); border-radius: 16px;
-            padding: 20px; margin-bottom: 15px; text-align: center;
-        }
-        .balance-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 2px; }
-        .balance-amount { font-size: 36px; font-weight: 800; color: #fff; }
-        .balance-row {
-            display: flex; justify-content: space-around;
-            margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);
-        }
-        .balance-value { font-size: 16px; font-weight: 700; }
-        .balance-sub { font-size: 10px; color: #888; margin-top: 2px; }
-        .person-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        .person-card { padding: 15px; border-radius: 12px; text-align: center; }
-        .person-danya { background: rgba(74,158,255,0.1); border: 1px solid rgba(74,158,255,0.3); }
-        .person-kotya { background: rgba(255,105,180,0.1); border: 1px solid rgba(255,105,180,0.3); }
-        .person-name { font-size: 15px; font-weight: 600; margin-bottom: 5px; }
-        .person-stat { font-size: 13px; margin: 2px 0; }
-        .quick-buttons { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        .quick-btn {
-            padding: 16px; border-radius: 14px; border: 2px solid var(--border);
-            background: var(--card-bg); text-align: center; cursor: pointer;
-            font-size: 14px; font-weight: 600;
-        }
-        .quick-btn:active { transform: scale(0.95); border-color: var(--accent); }
-        .quick-btn .emoji { font-size: 28px; display: block; margin-bottom: 4px; }
-        .btn-income { color: var(--success); }
-        .btn-expense { color: #ff6b6b; }
-        .btn-savings { color: var(--gold); }
-        .tabs { display: flex; gap: 2px; background: var(--card-bg); border-radius: 12px; padding: 3px; margin-bottom: 15px; }
-        .tab {
-            flex: 1; padding: 12px; text-align: center; font-size: 13px;
-            color: #888; border-radius: 10px; cursor: pointer; border: none; background: transparent;
-        }
-        .tab.active { background: var(--accent); color: #fff; font-weight: 600; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        .panel { background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; padding: 20px; margin-bottom: 15px; }
-        .panel-title { font-size: 16px; font-weight: 600; color: var(--white); margin-bottom: 15px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
-        .form-group { margin-bottom: 12px; }
-        .form-group label { display: block; font-size: 12px; color: #888; margin-bottom: 4px; }
-        .form-group input, .form-group select {
-            width: 100%; padding: 14px; background: #0a0a0a; border: 2px solid var(--border);
-            border-radius: 10px; color: #fff; font-size: 16px; -webkit-appearance: none;
-        }
-        .person-toggle { display: flex; gap: 8px; margin-bottom: 12px; }
-        .person-toggle button {
-            flex: 1; padding: 12px; border: 2px solid var(--border);
-            background: transparent; color: #888; border-radius: 10px; font-size: 14px; cursor: pointer;
-        }
-        .person-toggle button.active-danya { border-color: var(--danya); color: var(--danya); background: rgba(74,158,255,0.1); }
-        .person-toggle button.active-kotya { border-color: var(--kotya); color: var(--kotya); background: rgba(255,105,180,0.1); }
-        .btn {
-            width: 100%; padding: 14px; border: none; border-radius: 10px;
-            font-size: 15px; font-weight: 700; cursor: pointer; color: #fff;
-        }
-        .btn:active { transform: scale(0.97); }
-        .btn-gold { background: var(--gold); color: #000; }
-        .btn-red { background: var(--accent); }
-        .btn-green { background: var(--success); }
-        .btn-sm { width: auto; padding: 8px 16px; font-size: 12px; display: inline-block; }
-        .transaction-list { background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
-        .transaction-item {
-            display: flex; align-items: center; padding: 12px 15px;
-            border-bottom: 1px solid #1a1a1a; gap: 10px;
-        }
-        .transaction-item:last-child { border-bottom: none; }
-        .t-icon { font-size: 24px; min-width: 30px; text-align: center; }
-        .t-info { flex: 1; min-width: 0; }
-        .t-name { font-size: 14px; font-weight: 500; }
-        .t-meta { font-size: 11px; color: #666; margin-top: 2px; }
-        .t-tag { display: inline-block; padding: 1px 6px; border-radius: 6px; font-size: 9px; margin-right: 4px; }
-        .tag-danya { background: rgba(74,158,255,0.2); color: #4a9eff; }
-        .tag-kotya { background: rgba(255,105,180,0.2); color: #ff69b4; }
-        .t-amount { font-size: 15px; font-weight: 700; white-space: nowrap; }
-        .positive { color: var(--success); }
-        .negative { color: #ff6b6b; }
-        .savings-color { color: var(--gold); }
-        .t-delete { background: none; border: none; color: #666; font-size: 16px; padding: 6px; cursor: pointer; }
-        .t-delete:active { color: #ff6b6b; }
-        .empty-state { text-align: center; padding: 40px; color: #666; }
-        .goal-item { background: #0a0a0a; border: 1px solid var(--border); border-radius: 10px; padding: 15px; margin-bottom: 10px; }
-        .goal-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
-        .goal-name { font-weight: 600; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .stat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 20px; transition: all 0.3s; }
+        .stat-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+        .stat-card.accent-card { background: linear-gradient(135deg, rgba(196,30,58,0.2) 0%, rgba(20,20,20,0.98) 100%); border-color: var(--accent); }
+        .stat-icon { font-size: 24px; margin-bottom: 10px; }
+        .stat-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; }
+        .stat-value { font-size: 26px; font-weight: 700; color: var(--white); }
+        .stat-subtitle { font-size: 12px; color: #666; margin-top: 5px; }
+        .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        @media (max-width:768px) { .main-grid{grid-template-columns:1fr;} .person-stats{grid-template-columns:1fr;} }
+        .panel { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+        .panel-title { font-size: 16px; font-weight: 600; color: var(--white); margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--border); }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; color: #999; font-size: 12px; }
+        input, select { width: 100%; padding: 12px; background: #0a0a0a; border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px; transition: all 0.3s; }
+        input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 15px rgba(196,30,58,0.2); }
+        select option { background: #0a0a0a; color: var(--text); }
+        .btn { width: 100%; padding: 12px; border: 1px solid var(--accent); background: rgba(196,30,58,0.15); color: var(--white); font-size: 14px; font-weight: 600; letter-spacing: 1px; border-radius: 8px; cursor: pointer; transition: all 0.3s; margin-bottom: 8px; }
+        .btn:hover { background: rgba(196,30,58,0.3); box-shadow: 0 0 20px rgba(196,30,58,0.3); }
+        .btn-gold { border-color: var(--gold); background: rgba(212,167,116,0.15); color: var(--gold); }
+        .btn-gold:hover { background: rgba(212,167,116,0.3); }
+        .btn-sm { width: auto; padding: 8px 16px; font-size: 12px; }
+        .recommendation { margin-top: 15px; padding: 15px; background: rgba(212,167,116,0.08); border: 1px solid rgba(212,167,116,0.3); border-radius: 8px; display: none; }
+        .recommendation.active { display: block; animation: slideDown 0.3s ease; }
+        @keyframes slideDown { from{opacity:0;transform:translateY(-10px);} to{opacity:1;transform:translateY(0);} }
+        .recommendation-text { color: var(--gold); font-size: 13px; margin-bottom: 10px; }
+        .person-selector { display: flex; gap: 10px; margin-bottom: 10px; }
+        .person-btn { flex: 1; padding: 10px; border: 2px solid var(--border); background: transparent; color: #888; border-radius: 8px; cursor: pointer; font-size: 13px; transition: all 0.3s; text-align: center; }
+        .person-btn.active-danya { border-color: var(--danya); color: var(--danya); background: rgba(74,158,255,0.1); }
+        .person-btn.active-kotya { border-color: var(--kotya); color: var(--kotya); background: rgba(255,105,180,0.1); }
+        .goal-item { background: #0a0a0a; border: 1px solid var(--border); border-radius: 8px; padding: 15px; margin-bottom: 10px; }
+        .goal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .goal-name { font-weight: 600; color: var(--white); }
+        .goal-amount { font-size: 13px; color: #888; }
         .goal-bar { height: 8px; background: #0a0a0a; border-radius: 4px; overflow: hidden; margin-bottom: 5px; }
-        .goal-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--accent-light)); border-radius: 4px; }
+        .goal-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--accent-light)); border-radius: 4px; transition: width 0.5s; }
         .goal-meta { font-size: 11px; color: #666; display: flex; justify-content: space-between; }
-        .payment-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #1a1a1a; flex-wrap: wrap; gap: 5px; }
-        .payment-name { font-size: 13px; }
+        .payment-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #1a1a1a; flex-wrap: wrap; gap: 8px; }
+        .payment-name { font-size: 13px; color: #ccc; }
         .payment-date { font-size: 11px; color: #666; }
-        .payment-amount { font-weight: 600; }
-        .payment-status { padding: 3px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
+        .payment-amount { font-weight: 600; font-size: 14px; }
+        .payment-status { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
         .status-paid { background: rgba(74,158,110,0.2); color: var(--success); }
         .status-pending { background: rgba(212,167,116,0.2); color: var(--gold); }
         .status-overdue { background: rgba(196,30,58,0.2); color: var(--danger); }
         .category-bar { margin-bottom: 12px; }
-        .category-header { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 13px; }
+        .category-header { display: flex; justify-content: space-between; margin-bottom: 6px; }
+        .category-name { font-size: 13px; color: #ccc; }
+        .category-amount { font-size: 13px; color: #999; }
         .bar-container { height: 6px; background: #0a0a0a; border-radius: 3px; overflow: hidden; }
-        .bar-fill { height: 100%; border-radius: 3px; }
-        .bar-food { background: #ff6b6b; }
-        .bar-clothes { background: #a29bfe; }
-        .bar-transport { background: #74b9ff; }
-        .bar-other { background: #636e72; }
-        .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 12px 24px; border-radius: 25px; font-size: 14px; opacity: 0; transition: .3s; pointer-events: none; z-index: 999; }
-        .toast.show { opacity: 1; }
-        ::-webkit-scrollbar { width: 4px; }
+        .bar-fill { height: 100%; border-radius: 3px; transition: width 0.5s; }
+        .bar-food { background: linear-gradient(90deg, #ff6b6b, #ee5a24); }
+        .bar-clothes { background: linear-gradient(90deg, #a29bfe, #6c5ce7); }
+        .bar-transport { background: linear-gradient(90deg, #74b9ff, #0984e3); }
+        .bar-other { background: linear-gradient(90deg, #636e72, #2d3436); }
+        .person-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .person-card { padding: 15px; border-radius: 8px; text-align: center; }
+        .person-danya { background: rgba(74,158,255,0.1); border: 1px solid rgba(74,158,255,0.3); }
+        .person-kotya { background: rgba(255,105,180,0.1); border: 1px solid rgba(255,105,180,0.3); }
+        .person-name { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+        .person-income { color: var(--success); font-size: 14px; }
+        .person-expense { color: #ff6b6b; font-size: 14px; }
+        .person-balance { font-size: 13px; color: #888; margin-top: 5px; }
+        .transaction-list { max-height: 500px; overflow-y: auto; }
+        .transaction-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #1a1a1a; animation: fadeIn 0.3s; flex-wrap: wrap; gap: 8px; }
+        @keyframes fadeIn { from{opacity:0;transform:translateX(-10px);} to{opacity:1;transform:translateX(0);} }
+        .transaction-item:hover { background: rgba(255,255,255,0.02); }
+        .transaction-info { flex: 1; min-width: 150px; }
+        .transaction-name { font-size: 14px; color: #ccc; }
+        .transaction-meta { font-size: 11px; color: #666; margin-top: 2px; }
+        .transaction-person { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; margin-left: 8px; }
+        .person-tag-danya { background: rgba(74,158,255,0.2); color: var(--danya); }
+        .person-tag-kotya { background: rgba(255,105,180,0.2); color: var(--kotya); }
+        .transaction-amount { font-weight: 600; font-size: 15px; margin: 0 12px; white-space: nowrap; }
+        .positive { color: var(--success); }
+        .negative { color: #ff4444; }
+        .savings-color { color: var(--gold); }
+        .btn-delete { background: none; border: 1px solid #2a2a2a; color: #666; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 14px; transition: all 0.2s; }
+        .btn-delete:hover { border-color: var(--danger); color: var(--danger); background: rgba(196,30,58,0.15); }
+        .empty-state { text-align: center; padding: 40px; color: #666; }
+        .tabs { display: flex; gap: 5px; margin-bottom: 20px; flex-wrap: wrap; }
+        .tab { padding: 10px 20px; background: var(--card-bg); border: 1px solid var(--border); color: #888; cursor: pointer; border-radius: 8px 8px 0 0; font-size: 13px; letter-spacing: 1px; transition: all 0.3s; }
+        .tab.active { background: var(--panel); color: var(--white); border-bottom-color: var(--accent); box-shadow: 0 -2px 10px rgba(196,30,58,0.2); }
+        .tab:hover { color: var(--white); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .makima-toast { position: fixed; bottom: 30px; right: 30px; background: linear-gradient(135deg, #1a1a1a, #0a0a0a); border: 1px solid var(--accent); border-radius: 12px; padding: 20px; z-index: 999; display: none; animation: toastIn 0.5s ease; max-width: 350px; box-shadow: 0 10px 40px rgba(196,30,58,0.3); }
+        .makima-toast.show { display: block; }
+        @keyframes toastIn { from{transform:translateX(100%);opacity:0;} to{transform:translateX(0);opacity:1;} }
+        .makima-toast .toast-text { color: #ccc; font-size: 13px; line-height: 1.5; }
+        .makima-toast .toast-signature { color: var(--accent-light); font-style: italic; margin-top: 8px; font-size: 12px; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 25px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; }
+        .modal-content h3 { color: var(--white); margin-bottom: 15px; }
+        .modal-close { float: right; background: none; border: none; color: #888; font-size: 20px; cursor: pointer; }
+        ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #0a0a0a; }
-        ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 2px; }
-        @media (max-width: 600px) {
-            .quick-buttons { grid-template-columns: 1fr 1fr; }
-        }
+        ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 3px; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>⛓️ Бюджет Дани и Коти</h1>
-            <div class="subtitle">Синхронизация работает</div>
+            <div class="header-content">
+                <div>
+                    <div class="title-block">
+                        <h1>支配の予算 • Бюджет Дани и Коти</h1>
+                        <div class="jp-title">Shihai no Yosan — Под контролем</div>
+                    </div>
+                    <div class="quote">"Всё, что тебе нужно — это подчинить свои финансы. Я научу вас контролю." <span style="color:var(--accent-light);">— Макима</span></div>
+                    <div class="salary-dates">
+                        <span class="salary-date">💰 10 число</span><span class="salary-date">💰 14 число</span><span class="salary-date">💰 25 число</span><span class="salary-date">💰 29 число</span>
+                    </div>
+                </div>
+                <div style="font-size:60px;opacity:0.3;">⛓️🐕</div>
+            </div>
         </div>
 
-        <div class="sync-panel">
-            <div class="sync-dot" id="syncDot"></div>
-            <span class="sync-text" id="syncText">Загрузка...</span>
-            <button class="btn btn-sm btn-red" onclick="location.reload()">🔄</button>
+        <div class="sync-bar">
+            <div class="sync-info">
+                <span>☁️ Автосинхронизация</span>
+                <div class="sync-status">
+                    <div class="sync-dot" id="syncDot"></div>
+                    <span style="font-size:12px;color:#888;" id="syncStatus">Загрузка...</span>
+                </div>
+            </div>
         </div>
 
         <div class="alerts-bar" id="alertsBar"></div>
 
-        <div class="balance-card">
-            <div class="balance-label">💰 Доступно</div>
-            <div class="balance-amount" id="totalBalance">0 ₽</div>
-            <div class="balance-row">
-                <div><div class="balance-value" id="dailyBudget" style="color:#ff6b6b;">0 ₽</div><div class="balance-sub">На сегодня</div></div>
-                <div><div class="balance-value" id="savingsAmount" style="color:var(--gold);">0 ₽</div><div class="balance-sub">Накопления</div></div>
-            </div>
+        <div class="stats-grid">
+            <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-label">Общий баланс</div><div class="stat-value" id="totalBalance">0 ₽</div><div class="stat-subtitle">доступно сейчас</div></div>
+            <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-label">Дневной лимит</div><div class="stat-value" id="dailyBudget">0 ₽</div><div class="stat-subtitle" id="daysInfo">до конца месяца</div></div>
+            <div class="stat-card accent-card"><div class="stat-icon">🔗</div><div class="stat-label">Накопления</div><div class="stat-value" id="savingsAmount">0 ₽</div><div class="stat-subtitle">в схроне</div></div>
         </div>
 
-        <div class="person-row">
-            <div class="person-card person-danya">
-                <div class="person-name" style="color:var(--danya);">👤 Даня</div>
-                <div class="person-stat" style="color:var(--success);">+<span id="danyaIncome">0</span> ₽</div>
-                <div class="person-stat" style="color:#ff6b6b;">-<span id="danyaExpense">0</span> ₽</div>
-            </div>
-            <div class="person-card person-kotya">
-                <div class="person-name" style="color:var(--kotya);">👤 Котя</div>
-                <div class="person-stat" style="color:var(--success);">+<span id="kotyaIncome">0</span> ₽</div>
-                <div class="person-stat" style="color:#ff6b6b;">-<span id="kotyaExpense">0</span> ₽</div>
-            </div>
-        </div>
-
-        <div class="quick-buttons">
-            <div class="quick-btn btn-income" onclick="showForm('income')"><span class="emoji">💸</span>Доход</div>
-            <div class="quick-btn btn-expense" onclick="showForm('expense')"><span class="emoji">🛒</span>Расход</div>
-            <div class="quick-btn btn-savings" onclick="showForm('savings')"><span class="emoji">🔒</span>Копилка</div>
-        </div>
-
-        <div class="panel" id="addForm" style="display:none;">
-            <div class="panel-title" id="formTitle">Добавить</div>
-            <div class="person-toggle">
-                <button id="personDanya" class="active-danya" onclick="setPerson('Даня')">👤 Даня</button>
-                <button id="personKotya" onclick="setPerson('Котя')">👤 Котя</button>
-            </div>
-            <div class="form-group"><label>Сумма (₽)</label><input type="number" id="formAmount" placeholder="0" inputmode="numeric"></div>
-            <div class="form-group" id="categoryGroup" style="display:none;"><label>Категория</label><select id="formCategory"><option value="еда">🍜 Еда</option><option value="одежда">👘 Одежда</option><option value="транспорт">🚃 Транспорт</option><option value="прочие">🗂️ Прочее</option></select></div>
-            <div class="form-group"><label>Описание</label><input type="text" id="formDescription" placeholder="Откуда / на что..."></div>
-            <button class="btn" id="submitBtn" onclick="submitForm()">Записать</button>
-            <button class="btn" style="background:transparent;border:1px solid var(--border);color:#888;margin-top:8px;" onclick="hideForm()">Отмена</button>
+        <div class="person-stats">
+            <div class="person-card person-danya"><div class="person-name" style="color:var(--danya);">👤 Даня</div><div class="person-income">Доход: <span id="danyaIncome">0 ₽</span></div><div class="person-expense">Расход: <span id="danyaExpense">0 ₽</span></div><div class="person-balance">Баланс: <span id="danyaBalance">0 ₽</span></div></div>
+            <div class="person-card person-kotya"><div class="person-name" style="color:var(--kotya);">👤 Котя</div><div class="person-income">Доход: <span id="kotyaIncome">0 ₽</span></div><div class="person-expense">Расход: <span id="kotyaExpense">0 ₽</span></div><div class="person-balance">Баланс: <span id="kotyaBalance">0 ₽</span></div></div>
         </div>
 
         <div class="tabs">
-            <button class="tab active" onclick="switchTab('history')">📋 История</button>
-            <button class="tab" onclick="switchTab('analytics')">📊 Аналитика</button>
-            <button class="tab" onclick="switchTab('goals')">🎯 Цели</button>
-            <button class="tab" onclick="switchTab('payments')">📅 Платежи</button>
+            <div class="tab active" onclick="switchTab('transactions')">💳 Операции</div>
+            <div class="tab" onclick="switchTab('analytics')">📊 Аналитика</div>
+            <div class="tab" onclick="switchTab('goals')">🎯 Цели</div>
+            <div class="tab" onclick="switchTab('payments')">📅 Платежи</div>
         </div>
 
-        <div class="tab-content active" id="tab-history">
-            <div class="transaction-list" id="transactionList"><div class="empty-state">Пока нет записей</div></div>
+        <div class="tab-content active" id="tab-transactions">
+            <div class="main-grid">
+                <div class="panel">
+                    <div class="panel-title">➕ Доход</div>
+                    <div class="person-selector">
+                        <div class="person-btn active-danya" id="incomePersonDanya" onclick="selectIncomePerson('Даня')">👤 Даня</div>
+                        <div class="person-btn" id="incomePersonKotya" onclick="selectIncomePerson('Котя')">👤 Котя</div>
+                    </div>
+                    <div class="form-group"><label>Сумма (₽)</label><input type="number" id="incomeAmount" placeholder="50000"></div>
+                    <div class="form-group"><label>Описание</label><input type="text" id="incomeDescription" placeholder="Зарплата..."></div>
+                    <button class="btn" onclick="addIncome()">Записать доход</button>
+                    <div class="recommendation" id="savingsRecommendation">
+                        <div class="recommendation-text">💡 Отложить <strong id="recommendedAmount">0 ₽</strong> (15%)</div>
+                        <button class="btn btn-gold" onclick="acceptRecommendation()">✅ Отложить</button>
+                        <button class="btn" style="margin-top:5px;background:rgba(255,255,255,0.05);border-color:#444;" onclick="declineRecommendation()">Пропустить</button>
+                    </div>
+                </div>
+                <div class="panel">
+                    <div class="panel-title">➖ Расход</div>
+                    <div class="person-selector">
+                        <div class="person-btn active-danya" id="expensePersonDanya" onclick="selectExpensePerson('Даня')">👤 Даня</div>
+                        <div class="person-btn" id="expensePersonKotya" onclick="selectExpensePerson('Котя')">👤 Котя</div>
+                    </div>
+                    <div class="form-group"><label>Сумма (₽)</label><input type="number" id="expenseAmount" placeholder="1500"></div>
+                    <div class="form-group"><label>Категория</label><select id="expenseCategory"><option value="еда">🍜 Еда</option><option value="одежда">👘 Одежда</option><option value="транспорт">🚃 Транспорт</option><option value="прочие">🗂️ Прочие</option></select></div>
+                    <div class="form-group"><label>Описание</label><input type="text" id="expenseDescription" placeholder="Что купили..."></div>
+                    <button class="btn" onclick="addExpense()">Записать расход</button>
+                    <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border);">
+                        <div class="form-group"><label>Отложить в накопления (₽)</label><input type="number" id="manualSavings" placeholder="5000"></div>
+                        <button class="btn btn-gold" onclick="addManualSavings()">🔗 В схрон</button>
+                    </div>
+                </div>
+            </div>
+            <div class="panel"><div class="panel-title">📋 История</div><div class="transaction-list" id="transactionList"><div class="empty-state">Пока нет записей</div></div></div>
         </div>
 
         <div class="tab-content" id="tab-analytics">
-            <div class="panel">
-                <div class="panel-title">📊 Расходы по категориям</div>
-                <div id="analyticsContent"></div>
+            <div class="main-grid">
+                <div class="panel">
+                    <div class="panel-title">📊 Расходы по категориям</div>
+                    <div class="category-bar"><div class="category-header"><span class="category-name">🍜 Еда</span><span class="category-amount" id="catFood">0 ₽</span></div><div class="bar-container"><div class="bar-fill bar-food" id="barFood" style="width:0%"></div></div></div>
+                    <div class="category-bar"><div class="category-header"><span class="category-name">👘 Одежда</span><span class="category-amount" id="catClothes">0 ₽</span></div><div class="bar-container"><div class="bar-fill bar-clothes" id="barClothes" style="width:0%"></div></div></div>
+                    <div class="category-bar"><div class="category-header"><span class="category-name">🚃 Транспорт</span><span class="category-amount" id="catTransport">0 ₽</span></div><div class="bar-container"><div class="bar-fill bar-transport" id="barTransport" style="width:0%"></div></div></div>
+                    <div class="category-bar"><div class="category-header"><span class="category-name">🗂️ Прочие</span><span class="category-amount" id="catOther">0 ₽</span></div><div class="bar-container"><div class="bar-fill bar-other" id="barOther" style="width:0%"></div></div></div>
+                    <div style="margin-top:15px;padding-top:15px;border-top:1px solid var(--border);display:flex;justify-content:space-between;"><span style="color:#888;">Всего расходов</span><span id="totalExpenses" style="color:#ff4444;font-weight:600;">0 ₽</span></div>
+                </div>
+                <div class="panel" style="display:flex;align-items:center;justify-content:center;"><div style="text-align:center;color:#666;"><div style="font-size:80px;margin-bottom:15px;">🐕</div><div style="font-size:13px;font-style:italic;">"Хороший пёс следит<br>за своими финансами."</div><button class="btn btn-sm" style="margin-top:20px;" onclick="generatePDF()">📄 Скачать PDF-отчёт</button></div></div>
             </div>
         </div>
 
         <div class="tab-content" id="tab-goals">
-            <div class="panel">
-                <div class="panel-title">🎯 Цели</div>
-                <div class="form-group"><label>Название</label><input type="text" id="goalName" placeholder="Отпуск, техника..."></div>
-                <div class="form-group"><label>Сумма (₽)</label><input type="number" id="goalAmount" placeholder="100000" inputmode="numeric"></div>
-                <button class="btn btn-gold" onclick="addGoal()">Добавить цель</button>
-                <div id="goalsList" style="margin-top:15px;"></div>
+            <div class="main-grid">
+                <div class="panel"><div class="panel-title">🎯 Новая цель</div><div class="form-group"><label>Название цели</label><input type="text" id="goalName" placeholder="Отпуск, техника, ремонт..."></div><div class="form-group"><label>Сумма цели (₽)</label><input type="number" id="goalAmount" placeholder="100000"></div><button class="btn btn-gold" onclick="addGoal()">Добавить цель</button></div>
+                <div class="panel"><div class="panel-title">🎯 Мои цели</div><div id="goalsList"><div class="empty-state">Пока нет целей</div></div></div>
             </div>
         </div>
 
         <div class="tab-content" id="tab-payments">
-            <div class="panel">
-                <div class="panel-title">📅 Обязательные платежи</div>
-                <div class="form-group"><label>Название</label><input type="text" id="paymentName" placeholder="Аренда, кредит..."></div>
-                <div class="form-group"><label>Сумма (₽)</label><input type="number" id="paymentAmount" placeholder="30000" inputmode="numeric"></div>
-                <div class="form-group"><label>День месяца</label><input type="number" id="paymentDay" placeholder="15" min="1" max="31" inputmode="numeric"></div>
-                <button class="btn btn-red" onclick="addPayment()">Добавить</button>
-                <div id="paymentsList" style="margin-top:15px;"></div>
+            <div class="main-grid">
+                <div class="panel"><div class="panel-title">📅 Обязательные платежи</div><div class="form-group"><label>Название</label><input type="text" id="paymentName" placeholder="Аренда, кредит, подписка..."></div><div class="form-group"><label>Сумма (₽)</label><input type="number" id="paymentAmount" placeholder="30000"></div><div class="form-group"><label>День месяца (1-31)</label><input type="number" id="paymentDay" placeholder="15" min="1" max="31"></div><button class="btn" onclick="addPayment()">Добавить платёж</button></div>
+                <div class="panel"><div class="panel-title">📋 Список платежей</div><div id="paymentsList"><div class="empty-state">Нет обязательных платежей</div></div></div>
             </div>
         </div>
     </div>
 
-    <div class="toast" id="toast"></div>
+    <div class="makima-toast" id="makimaToast"><div class="toast-text" id="toastText"></div><div class="toast-signature">— Макима</div></div>
 
     <script>
+        // ============ АВТОСИНХРОНИЗАЦИЯ ЧЕРЕЗ GITHUB ============
         const TOKEN = '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';
         const API = 'https://api.github.com/repos/lolzoff6412/budget/contents/data.json';
         
         let transactions = [], savingsTotal = 0, goals = [], payments = [];
-        let fileSHA = null, currentForm = 'income', selectedPerson = 'Даня';
+        let pendingSavings = 0, selectedIncomePerson = 'Даня', selectedExpensePerson = 'Даня';
+        let fileSHA = null;
 
         async function loadCloud() {
-            document.getElementById('syncText').textContent = 'Загрузка...';
-            document.getElementById('syncDot').className = 'sync-dot load';
+            setSync('load', 'Загрузка данных...');
             try {
                 const r = await fetch(API, { headers: { 'Authorization': 'Bearer ' + TOKEN } });
                 if (r.ok) {
@@ -272,18 +283,20 @@
                     savingsTotal = c.savingsTotal || 0;
                     goals = c.goals || [];
                     payments = c.payments || [];
-                    document.getElementById('syncDot').className = 'sync-dot';
-                    document.getElementById('syncText').textContent = 'Синхронизировано ✅';
+                    setSync('on', 'Синхронизировано ✅');
+                } else if (r.status === 404) {
+                    // Файла нет — создадим при первом сохранении
+                    fileSHA = null;
+                    setSync('on', 'Ожидание первого сохранения');
                 }
             } catch (e) {
-                document.getElementById('syncDot').className = 'sync-dot off';
-                document.getElementById('syncText').textContent = 'Офлайн';
+                setSync('off', 'Офлайн. Данные локально.');
             }
             updateUI();
         }
 
         async function saveCloud() {
-            document.getElementById('syncText').textContent = 'Сохранение...';
+            setSync('load', 'Сохранение...');
             const data = { transactions, savingsTotal, goals, payments };
             const content = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
             const body = { message: 'update', content, branch: 'main' };
@@ -297,246 +310,269 @@
                 if (r.ok) {
                     const d = await r.json();
                     fileSHA = d.content.sha;
-                    document.getElementById('syncDot').className = 'sync-dot';
-                    document.getElementById('syncText').textContent = 'Сохранено ✅';
+                    setSync('on', 'Сохранено ✅');
                 }
             } catch (e) {
-                document.getElementById('syncDot').className = 'sync-dot off';
-                document.getElementById('syncText').textContent = 'Офлайн';
+                setSync('off', 'Офлайн');
             }
         }
 
+        function setSync(status, text) {
+            const dot = document.getElementById('syncDot');
+            dot.className = 'sync-dot' + (status === 'off' ? ' off' : status === 'load' ? ' load' : '');
+            document.getElementById('syncStatus').textContent = text;
+        }
+
+        // ============ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ============
         function getRemainingDays() {
             const now = new Date();
             const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
             return Math.ceil((lastDay - now) / (1000 * 60 * 60 * 24)) || 1;
         }
-
         function calculateBalance() {
             return transactions.reduce((s, t) => t.type === 'income' ? s + t.amount : s - t.amount, 0);
         }
-
-        function showForm(type) {
-            currentForm = type;
-            document.getElementById('addForm').style.display = 'block';
-            document.getElementById('formTitle').textContent = type === 'income' ? '💸 Доход' : type === 'savings' ? '🔒 Копилка' : '🛒 Расход';
-            document.getElementById('categoryGroup').style.display = type === 'expense' ? 'block' : 'none';
-            const btn = document.getElementById('submitBtn');
-            if (type === 'income') { btn.className = 'btn btn-green'; btn.textContent = '💸 Записать доход'; }
-            else if (type === 'savings') { btn.className = 'btn btn-gold'; btn.textContent = '🔒 Отложить'; }
-            else { btn.className = 'btn btn-red'; btn.textContent = '🛒 Записать расход'; }
-            document.getElementById('formAmount').value = '';
-            document.getElementById('formDescription').value = '';
-            setTimeout(() => document.getElementById('formAmount').focus(), 100);
-            document.getElementById('addForm').scrollIntoView({ behavior: 'smooth' });
-        }
-
-        function hideForm() { document.getElementById('addForm').style.display = 'none'; }
-
-        function setPerson(p) {
-            selectedPerson = p;
-            document.getElementById('personDanya').className = p === 'Даня' ? 'active-danya' : '';
-            document.getElementById('personKotya').className = p === 'Котя' ? 'active-kotya' : '';
-        }
-
-        async function submitForm() {
-            const amount = parseFloat(document.getElementById('formAmount').value);
-            const desc = document.getElementById('formDescription').value.trim();
-            if (!amount || amount <= 0) return alert('Введи сумму!');
-
-            if (currentForm === 'income') {
-                transactions.push({ id: Date.now(), type: 'income', amount, description: desc || 'Доход', person: selectedPerson, date: new Date().toISOString() });
-                const s15 = Math.round(amount * 0.15);
-                if (s15 > 0 && confirm('💡 Отложить ' + s15.toLocaleString() + ' ₽ (15%) в накопления?')) {
-                    transactions.push({ id: Date.now()+1, type: 'savings', amount: s15, description: 'Авто-накопление 15%', person: selectedPerson, date: new Date().toISOString() });
-                    savingsTotal += s15;
-                }
-            } else if (currentForm === 'expense') {
-                const cat = document.getElementById('formCategory').value;
-                const bal = calculateBalance();
-                if (amount > bal) return alert('❌ Недостаточно средств! Доступно: ' + bal.toLocaleString() + ' ₽');
-                transactions.push({ id: Date.now(), type: 'expense', amount, category: cat, description: desc || 'Расход', person: selectedPerson, date: new Date().toISOString() });
-            } else if (currentForm === 'savings') {
-                const bal = calculateBalance();
-                if (amount > bal) return alert('❌ Недостаточно средств!');
-                transactions.push({ id: Date.now(), type: 'savings', amount, description: desc || 'Накопление', person: selectedPerson, date: new Date().toISOString() });
-                savingsTotal += amount;
-            }
-            await saveCloud();
-            updateUI();
-            hideForm();
-            showToast('✅ Записано!');
-        }
-
-        async function deleteTransaction(id) {
-            if (!confirm('Удалить запись?')) return;
-            const t = transactions.find(x => x.id === id);
-            if (t && t.type === 'savings') { savingsTotal -= t.amount; if (savingsTotal < 0) savingsTotal = 0; }
-            transactions = transactions.filter(x => x.id !== id);
-            await saveCloud();
-            updateUI();
-            showToast('🗑️ Удалено');
-        }
-
-        function addGoal() {
-            const name = document.getElementById('goalName').value.trim();
-            const amount = parseFloat(document.getElementById('goalAmount').value);
-            if (!name || !amount || amount <= 0) return alert('Заполни все поля!');
-            goals.push({ id: Date.now(), name, target: amount, saved: 0 });
-            document.getElementById('goalName').value = '';
-            document.getElementById('goalAmount').value = '';
-            saveCloud();
-            updateUI();
-        }
-
-        function addToGoal(id) {
-            const goal = goals.find(g => g.id === id);
-            if (!goal) return;
-            const amount = parseFloat(prompt('Сколько отложить на цель «' + goal.name + '»?'));
-            if (!amount || amount <= 0) return;
-            if (amount > calculateBalance()) return alert('Недостаточно средств!');
-            goal.saved += amount;
-            transactions.push({ id: Date.now(), type: 'savings', amount, description: 'Цель: ' + goal.name, person: 'Даня', date: new Date().toISOString() });
-            savingsTotal += amount;
-            saveCloud();
-            updateUI();
-        }
-
-        function deleteGoal(id) { goals = goals.filter(g => g.id !== id); saveCloud(); updateUI(); }
-
-        function addPayment() {
-            const name = document.getElementById('paymentName').value.trim();
-            const amount = parseFloat(document.getElementById('paymentAmount').value);
-            const day = parseInt(document.getElementById('paymentDay').value);
-            if (!name || !amount || !day || day < 1 || day > 31) return alert('Заполни все поля!');
-            payments.push({ id: Date.now(), name, amount, day, paid: false });
-            document.getElementById('paymentName').value = '';
-            document.getElementById('paymentAmount').value = '';
-            document.getElementById('paymentDay').value = '';
-            saveCloud();
-            updateUI();
-        }
-
-        function togglePayment(id) {
-            const p = payments.find(x => x.id === id);
-            if (p) { p.paid = !p.paid; saveCloud(); updateUI(); }
-        }
-
-        function deletePayment(id) { payments = payments.filter(p => p.id !== id); saveCloud(); updateUI(); }
-
-        function switchTab(name) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            const tabs = { 'history': 0, 'analytics': 1, 'goals': 2, 'payments': 3 };
-            document.querySelectorAll('.tab')[tabs[name]].classList.add('active');
-            document.getElementById('tab-' + name).classList.add('active');
-        }
-
-        function showToast(msg) {
-            const t = document.getElementById('toast');
-            t.textContent = msg; t.classList.add('show');
-            setTimeout(() => t.classList.remove('show'), 2000);
-        }
-
-        function updateUI() {
-            const bal = calculateBalance();
-            const daysLeft = getRemainingDays();
-            const daily = bal / daysLeft;
-
-            document.getElementById('totalBalance').textContent = bal.toLocaleString() + ' ₽';
-            document.getElementById('dailyBudget').textContent = Math.round(daily).toLocaleString() + ' ₽';
-            document.getElementById('savingsAmount').textContent = savingsTotal.toLocaleString() + ' ₽';
-
+        function getPersonStats() {
             let di = 0, de = 0, ki = 0, ke = 0;
             transactions.forEach(t => {
                 if (t.person === 'Даня') { if (t.type === 'income') di += t.amount; else de += t.amount; }
                 else { if (t.type === 'income') ki += t.amount; else ke += t.amount; }
             });
-            document.getElementById('danyaIncome').textContent = di.toLocaleString();
-            document.getElementById('danyaExpense').textContent = de.toLocaleString();
-            document.getElementById('kotyaIncome').textContent = ki.toLocaleString();
-            document.getElementById('kotyaExpense').textContent = ke.toLocaleString();
-
-            // Алерты
-            const alertsBar = document.getElementById('alertsBar');
-            let alertsHTML = '';
+            return { danyaIncome: di, danyaExpense: de, danyaBalance: di - de, kotyaIncome: ki, kotyaExpense: ke, kotyaBalance: ki - ke };
+        }
+        function getCategoryAnalytics() {
+            const c = { 'еда': 0, 'одежда': 0, 'транспорт': 0, 'прочие': 0 };
+            let t = 0;
+            transactions.forEach(x => { if (x.type === 'expense' && c.hasOwnProperty(x.category)) { c[x.category] += x.amount; t += x.amount; } });
+            return { categories: c, total: t };
+        }
+        function formatDate(d) {
+            const date = new Date(d);
+            return date.getDate() + ' ' + date.toLocaleString('ru-RU', { month: 'long' }) + ', ' + String(date.getHours()).padStart(2, '0') + ':' + String(date.getMinutes()).padStart(2, '0');
+        }
+        function showToast(text) {
+            document.getElementById('toastText').textContent = text;
+            const t = document.getElementById('makimaToast');
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+        function updateAlerts() {
+            const bar = document.getElementById('alertsBar');
+            let a = [];
             const today = new Date().getDate();
+            const bal = calculateBalance();
+            const daily = bal / getRemainingDays();
             payments.forEach(p => {
-                if (!p.paid && p.day <= today + 3 && p.day >= today) alertsHTML += `<div class="alert alert-warning">⚠️ Скоро: ${p.name} ${p.amount.toLocaleString()} ₽</div>`;
-                if (!p.paid && p.day < today) alertsHTML += `<div class="alert alert-danger">❌ Просрочен: ${p.name}</div>`;
+                if (!p.paid && p.day <= today + 3 && p.day >= today) a.push({ type: 'warning', text: `⚠️ Скоро: ${p.name} — ${p.amount.toLocaleString()} ₽` });
+                if (!p.paid && p.day < today) a.push({ type: 'danger', text: `❌ Просрочен: ${p.name}` });
             });
-            if (daily < 300 && bal > 0) alertsHTML += `<div class="alert alert-danger">⚠️ Дневной лимит: ${Math.round(daily).toLocaleString()} ₽</div>`;
-            alertsBar.innerHTML = alertsHTML;
+            if (daily < 300 && bal > 0) a.push({ type: 'danger', text: `⚠️ Дневной лимит: ${Math.round(daily).toLocaleString()} ₽` });
+            if (bal < 1000 && bal > 0) a.push({ type: 'danger', text: `🚨 Баланс: ${bal.toLocaleString()} ₽` });
+            bar.innerHTML = a.map(x => `<div class="alert alert-${x.type}">${x.text}</div>`).join('');
+        }
 
-            // История
-            const list = document.getElementById('transactionList');
-            if (!transactions.length) {
-                list.innerHTML = '<div class="empty-state">Пока нет записей</div>';
-            } else {
-                list.innerHTML = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date)).map(t => {
-                    const icon = t.type === 'income' ? '💸' : t.type === 'savings' ? '🔒' : { 'еда': '🍜', 'одежда': '👘', 'транспорт': '🚃', 'прочие': '🗂️' }[t.category] || '📦';
-                    const sign = t.type === 'income' ? '+' : '-';
-                    const cls = t.type === 'income' ? 'positive' : t.type === 'savings' ? 'savings-color' : 'negative';
-                    const tag = t.person === 'Даня' ? '<span class="t-tag tag-danya">Даня</span>' : '<span class="t-tag tag-kotya">Котя</span>';
-                    const d = new Date(t.date);
-                    const ds = d.getDate() + '.' + (d.getMonth() + 1) + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
-                    return `<div class="transaction-item">
-                        <div class="t-icon">${icon}</div>
-                        <div class="t-info"><div class="t-name">${t.description}</div><div class="t-meta">${tag} ${ds}</div></div>
-                        <div class="t-amount ${cls}">${sign} ${t.amount.toLocaleString()} ₽</div>
-                        <button class="t-delete" onclick="deleteTransaction(${t.id})">✕</button>
-                    </div>`;
-                }).join('');
+        // ============ ВЫБОР ЧЕЛОВЕКА ============
+        function selectIncomePerson(p) {
+            selectedIncomePerson = p;
+            document.getElementById('incomePersonDanya').className = 'person-btn' + (p === 'Даня' ? ' active-danya' : '');
+            document.getElementById('incomePersonKotya').className = 'person-btn' + (p === 'Котя' ? ' active-kotya' : '');
+        }
+        function selectExpensePerson(p) {
+            selectedExpensePerson = p;
+            document.getElementById('expensePersonDanya').className = 'person-btn' + (p === 'Даня' ? ' active-danya' : '');
+            document.getElementById('expensePersonKotya').className = 'person-btn' + (p === 'Котя' ? ' active-kotya' : '');
+        }
+
+        // ============ ОПЕРАЦИИ ============
+        async function addIncome() {
+            const amount = parseFloat(document.getElementById('incomeAmount').value);
+            const desc = document.getElementById('incomeDescription').value.trim() || 'Доход';
+            if (!amount || amount <= 0) return alert('Введите сумму!');
+            transactions.push({ id: Date.now(), type: 'income', amount, description: desc, person: selectedIncomePerson, date: new Date().toISOString() });
+            pendingSavings = Math.round(amount * 0.15);
+            document.getElementById('recommendedAmount').textContent = pendingSavings.toLocaleString() + ' ₽';
+            document.getElementById('savingsRecommendation').classList.add('active');
+            document.getElementById('incomeAmount').value = '';
+            document.getElementById('incomeDescription').value = '';
+            await saveCloud(); updateUI();
+            if (savingsTotal >= 10000) showToast('🐕 "Хороший пёс. Продолжай в том же духе."');
+        }
+        async function acceptRecommendation() {
+            if (pendingSavings > 0) {
+                if (pendingSavings > calculateBalance()) return alert('Недостаточно средств!');
+                transactions.push({ id: Date.now(), type: 'savings', amount: pendingSavings, description: 'Авто-накопление (15%)', person: selectedIncomePerson, date: new Date().toISOString() });
+                savingsTotal += pendingSavings;
+                document.getElementById('savingsRecommendation').classList.remove('active');
+                pendingSavings = 0;
+                await saveCloud(); updateUI();
             }
+        }
+        function declineRecommendation() { document.getElementById('savingsRecommendation').classList.remove('active'); pendingSavings = 0; }
+        async function addExpense() {
+            const amount = parseFloat(document.getElementById('expenseAmount').value);
+            const cat = document.getElementById('expenseCategory').value;
+            const desc = document.getElementById('expenseDescription').value.trim() || 'Расход';
+            if (!amount || amount <= 0) return alert('Введите сумму!');
+            if (amount > calculateBalance()) return alert('Недостаточно средств!');
+            transactions.push({ id: Date.now(), type: 'expense', amount, category: cat, description: desc, person: selectedExpensePerson, date: new Date().toISOString() });
+            document.getElementById('expenseAmount').value = '';
+            document.getElementById('expenseDescription').value = '';
+            await saveCloud(); updateUI();
+        }
+        async function addManualSavings() {
+            const amount = parseFloat(document.getElementById('manualSavings').value);
+            if (!amount || amount <= 0) return alert('Введите сумму!');
+            if (amount > calculateBalance()) return alert('Недостаточно средств!');
+            transactions.push({ id: Date.now(), type: 'savings', amount, description: 'Накопление', person: selectedExpensePerson, date: new Date().toISOString() });
+            savingsTotal += amount;
+            document.getElementById('manualSavings').value = '';
+            await saveCloud(); updateUI();
+        }
+        async function deleteTransaction(id) {
+            if (!confirm('Удалить?')) return;
+            const t = transactions.find(x => x.id === id);
+            if (t && t.type === 'savings') { savingsTotal -= t.amount; if (savingsTotal < 0) savingsTotal = 0; }
+            transactions = transactions.filter(x => x.id !== id);
+            await saveCloud(); updateUI();
+        }
 
-            // Аналитика
-            const cats = { 'еда': 0, 'одежда': 0, 'транспорт': 0, 'прочие': 0 };
-            let totalExp = 0;
-            transactions.forEach(t => { if (t.type === 'expense' && cats.hasOwnProperty(t.category)) { cats[t.category] += t.amount; totalExp += t.amount; } });
-            const maxCat = Math.max(...Object.values(cats), 1);
-            const icons = { 'еда': '🍜', 'одежда': '👘', 'транспорт': '🚃', 'прочие': '🗂️' };
-            document.getElementById('analyticsContent').innerHTML = Object.entries(cats).map(([k, v]) => `
-                <div class="category-bar">
-                    <div class="category-header"><span>${icons[k]} ${k}</span><span>${v.toLocaleString()} ₽</span></div>
-                    <div class="bar-container"><div class="bar-fill bar-${k === 'еда' ? 'food' : k === 'одежда' ? 'clothes' : k === 'транспорт' ? 'transport' : 'other'}" style="width:${(v/maxCat*100)}%"></div></div>
-                </div>
-            `).join('') + `<div style="text-align:right;margin-top:10px;color:#888;">Всего: ${totalExp.toLocaleString()} ₽</div>`;
+        // ============ ЦЕЛИ ============
+        async function addGoal() {
+            const name = document.getElementById('goalName').value.trim();
+            const amount = parseFloat(document.getElementById('goalAmount').value);
+            if (!name || !amount) return alert('Заполните поля!');
+            goals.push({ id: Date.now(), name, target: amount, saved: 0 });
+            document.getElementById('goalName').value = '';
+            document.getElementById('goalAmount').value = '';
+            await saveCloud(); updateUI();
+        }
+        async function addToGoal(id) {
+            const amount = parseFloat(prompt('Сколько отложить?'));
+            if (!amount || amount <= 0) return;
+            const goal = goals.find(g => g.id === id);
+            if (!goal) return;
+            if (amount > calculateBalance()) return alert('Недостаточно средств!');
+            goal.saved += amount;
+            transactions.push({ id: Date.now(), type: 'savings', amount, description: 'Цель: ' + goal.name, person: 'Даня', date: new Date().toISOString() });
+            savingsTotal += amount;
+            await saveCloud(); updateUI();
+        }
+        async function deleteGoal(id) { goals = goals.filter(g => g.id !== id); await saveCloud(); updateUI(); }
 
-            // Цели
+        // ============ ПЛАТЕЖИ ============
+        async function addPayment() {
+            const name = document.getElementById('paymentName').value.trim();
+            const amount = parseFloat(document.getElementById('paymentAmount').value);
+            const day = parseInt(document.getElementById('paymentDay').value);
+            if (!name || !amount || !day || day < 1 || day > 31) return alert('Заполните поля!');
+            payments.push({ id: Date.now(), name, amount, day, paid: false });
+            document.getElementById('paymentName').value = '';
+            document.getElementById('paymentAmount').value = '';
+            document.getElementById('paymentDay').value = '';
+            await saveCloud(); updateUI();
+        }
+        async function togglePayment(id) { const p = payments.find(x => x.id === id); if (p) { p.paid = !p.paid; await saveCloud(); updateUI(); } }
+        async function deletePayment(id) { payments = payments.filter(p => p.id !== id); await saveCloud(); updateUI(); }
+
+        // ============ ТАБЫ ============
+        function switchTab(name) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            const map = { 'transactions': 0, 'analytics': 1, 'goals': 2, 'payments': 3 };
+            document.querySelectorAll('.tab')[map[name]].classList.add('active');
+            document.getElementById('tab-' + name).classList.add('active');
+        }
+
+        // ============ PDF ============
+        function generatePDF() {
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                const stats = getPersonStats();
+                doc.setFontSize(16); doc.setTextColor(196, 30, 58); doc.text('Budget Danya & Kotya', 20, 20);
+                doc.setFontSize(11); doc.setTextColor(100); doc.text(new Date().toLocaleString('ru-RU'), 20, 28);
+                doc.setFontSize(13); doc.setTextColor(220);
+                doc.text(`Balance: ${calculateBalance().toLocaleString()} RUB`, 20, 42);
+                doc.text(`Savings: ${savingsTotal.toLocaleString()} RUB`, 20, 52);
+                doc.setTextColor(74, 158, 255); doc.text(`Danya: +${stats.danyaIncome.toLocaleString()} / -${stats.danyaExpense.toLocaleString()}`, 20, 68);
+                doc.setTextColor(255, 105, 180); doc.text(`Kotya: +${stats.kotyaIncome.toLocaleString()} / -${stats.kotyaExpense.toLocaleString()}`, 20, 78);
+                doc.save('budget_report.pdf');
+                showToast('📄 "Отчёт готов."');
+            } catch (e) { alert('Ошибка PDF. Нужен интернет для загрузки библиотеки.'); }
+        }
+
+        // ============ ОБНОВЛЕНИЕ UI ============
+        function updateUI() {
+            const bal = calculateBalance();
+            const days = getRemainingDays();
+            const daily = bal / days;
+            const stats = getPersonStats();
+            const analytics = getCategoryAnalytics();
+
+            document.getElementById('totalBalance').textContent = bal.toLocaleString() + ' ₽';
+            document.getElementById('dailyBudget').textContent = Math.round(daily).toLocaleString() + ' ₽';
+            document.getElementById('daysInfo').textContent = 'на ' + days + ' дн.';
+            document.getElementById('savingsAmount').textContent = savingsTotal.toLocaleString() + ' ₽';
+            document.getElementById('danyaIncome').textContent = '+' + stats.danyaIncome.toLocaleString() + ' ₽';
+            document.getElementById('danyaExpense').textContent = '-' + stats.danyaExpense.toLocaleString() + ' ₽';
+            document.getElementById('danyaBalance').textContent = stats.danyaBalance.toLocaleString() + ' ₽';
+            document.getElementById('kotyaIncome').textContent = '+' + stats.kotyaIncome.toLocaleString() + ' ₽';
+            document.getElementById('kotyaExpense').textContent = '-' + stats.kotyaExpense.toLocaleString() + ' ₽';
+            document.getElementById('kotyaBalance').textContent = stats.kotyaBalance.toLocaleString() + ' ₽';
+
+            const max = Math.max(...Object.values(analytics.categories), 1);
+            document.getElementById('catFood').textContent = analytics.categories['еда'].toLocaleString() + ' ₽';
+            document.getElementById('catClothes').textContent = analytics.categories['одежда'].toLocaleString() + ' ₽';
+            document.getElementById('catTransport').textContent = analytics.categories['транспорт'].toLocaleString() + ' ₽';
+            document.getElementById('catOther').textContent = analytics.categories['прочие'].toLocaleString() + ' ₽';
+            document.getElementById('barFood').style.width = (analytics.categories['еда'] / max * 100) + '%';
+            document.getElementById('barClothes').style.width = (analytics.categories['одежда'] / max * 100) + '%';
+            document.getElementById('barTransport').style.width = (analytics.categories['транспорт'] / max * 100) + '%';
+            document.getElementById('barOther').style.width = (analytics.categories['прочие'] / max * 100) + '%';
+            document.getElementById('totalExpenses').textContent = analytics.total.toLocaleString() + ' ₽';
+
             const goalsList = document.getElementById('goalsList');
             goalsList.innerHTML = goals.length ? goals.map(g => {
                 const pct = Math.min((g.saved / g.target) * 100, 100);
-                const daysToGoal = daily > 0 ? Math.ceil((g.target - g.saved) / (daily * 0.3)) : '∞';
-                return `<div class="goal-item">
-                    <div class="goal-header"><span class="goal-name">🎯 ${g.name}</span><span>${g.saved.toLocaleString()} / ${g.target.toLocaleString()} ₽</span></div>
-                    <div class="goal-bar"><div class="goal-fill" style="width:${pct}%"></div></div>
-                    <div class="goal-meta"><span>${Math.round(pct)}%</span><span>~${daysToGoal} дн.</span></div>
-                    <button class="btn btn-gold btn-sm" style="margin-top:8px;" onclick="addToGoal(${g.id})">+ Пополнить</button>
-                    <button class="btn btn-sm" style="margin-top:5px;background:transparent;border:1px solid var(--border);color:#888;" onclick="deleteGoal(${g.id})">Удалить</button>
-                </div>`;
-            }).join('') : '<div class="empty-state">Нет целей</div>';
+                const d = daily > 0 ? Math.ceil((g.target - g.saved) / (daily * 0.3)) : '∞';
+                return `<div class="goal-item"><div class="goal-header"><span class="goal-name">🎯 ${g.name}</span><span class="goal-amount">${g.saved.toLocaleString()} / ${g.target.toLocaleString()} ₽</span></div><div class="goal-bar"><div class="goal-fill" style="width:${pct}%"></div></div><div class="goal-meta"><span>${Math.round(pct)}%</span><span>~${d} дн.</span></div><button class="btn btn-gold btn-sm" style="margin-top:8px;" onclick="addToGoal(${g.id})">+ Пополнить</button><button class="btn btn-sm" style="margin-top:5px;background:rgba(255,255,255,0.05);" onclick="deleteGoal(${g.id})">Удалить</button></div>`;
+            }).join('') : '<div class="empty-state">Пока нет целей</div>';
 
-            // Платежи
             const paymentsList = document.getElementById('paymentsList');
-            const today2 = new Date().getDate();
+            const today = new Date().getDate();
             paymentsList.innerHTML = payments.length ? payments.sort((a, b) => a.day - b.day).map(p => {
                 let cls = 'status-pending', txt = 'Ожидает';
                 if (p.paid) { cls = 'status-paid'; txt = 'Оплачен'; }
-                else if (p.day < today2) { cls = 'status-overdue'; txt = 'Просрочен'; }
-                return `<div class="payment-item">
-                    <div><div class="payment-name">${p.name}</div><div class="payment-date">${p.day} число</div></div>
-                    <div class="payment-amount">${p.amount.toLocaleString()} ₽</div>
-                    <span class="payment-status ${cls}">${txt}</span>
-                    <button class="btn btn-sm" style="width:auto;padding:4px 8px;font-size:11px;" onclick="togglePayment(${p.id})">✓</button>
-                    <button class="t-delete" onclick="deletePayment(${p.id})">✕</button>
-                </div>`;
-            }).join('') : '<div class="empty-state">Нет платежей</div>';
+                else if (p.day < today) { cls = 'status-overdue'; txt = 'Просрочен'; }
+                return `<div class="payment-item"><div><div class="payment-name">${p.name}</div><div class="payment-date">${p.day} число</div></div><div class="payment-amount">${p.amount.toLocaleString()} ₽</div><span class="payment-status ${cls}">${txt}</span><button class="btn btn-sm" style="width:auto;padding:5px 10px;" onclick="togglePayment(${p.id})">✓</button><button class="btn-delete" onclick="deletePayment(${p.id})">✕</button></div>`;
+            }).join('') : '<div class="empty-state">Нет обязательных платежей</div>';
+
+            const list = document.getElementById('transactionList');
+            list.innerHTML = transactions.length ? [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date)).map(t => {
+                let icon = '💰', cls = 'positive', sign = '+';
+                let tag = t.person === 'Даня' ? '<span class="transaction-person person-tag-danya">Даня</span>' : '<span class="transaction-person person-tag-kotya">Котя</span>';
+                if (t.type === 'expense') {
+                    sign = '-'; cls = 'negative';
+                    icon = { 'еда': '🍜', 'одежда': '👘', 'транспорт': '🚃', 'прочие': '🗂️' }[t.category] || '📦';
+                } else if (t.type === 'savings') { sign = '🔒'; cls = 'savings-color'; icon = '🔗'; }
+                return `<div class="transaction-item"><div class="transaction-info"><div class="transaction-name">${icon} ${t.description} ${tag}</div><div class="transaction-meta">${formatDate(t.date)}</div></div><div class="transaction-amount ${cls}">${sign} ${t.amount.toLocaleString()} ₽</div><button class="btn-delete" onclick="deleteTransaction(${t.id})">✕</button></div>`;
+            }).join('') : '<div class="empty-state">Пока нет записей</div>';
+
+            updateAlerts();
         }
 
-        document.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter' && document.getElementById('addForm').style.display === 'block') submitForm();
+        document.addEventListener('keypress', e => {
+            if (e.key === 'Enter') {
+                const a = document.activeElement;
+                if (a.id === 'incomeAmount' || a.id === 'incomeDescription') addIncome();
+                else if (a.id === 'expenseAmount' || a.id === 'expenseDescription') addExpense();
+                else if (a.id === 'manualSavings') addManualSavings();
+                else if (a.id === 'goalName' || a.id === 'goalAmount') addGoal();
+                else if (a.id === 'paymentName' || a.id === 'paymentAmount' || a.id === 'paymentDay') addPayment();
+            }
         });
 
+        // ЗАПУСК
         loadCloud();
     </script>
 </body>
