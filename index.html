@@ -10,24 +10,19 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 20px; }
         .container { max-width: 1400px; margin: 0 auto; }
-        .header { background: linear-gradient(135deg, rgba(20,20,20,0.98) 0%, rgba(10,10,10,0.98) 100%); border: 1px solid var(--border); border-radius: 12px; padding: 25px 30px; margin-bottom: 20px; }
+        .header { background: linear-gradient(135deg, rgba(20,20,20,0.98) 0%, rgba(10,10,10,0.98) 100%); border: 1px solid var(--border); border-radius: 12px; padding: 25px 30px; margin-bottom: 20px; position: relative; }
         .header::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--accent), var(--gold), var(--accent), transparent); }
         .header-content { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; }
         .title-block h1 { font-size: 28px; font-weight: 700; color: var(--white); }
         .title-block .jp-title { font-size: 14px; color: var(--accent-light); }
         .salary-dates { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
         .salary-date { background: rgba(196,30,58,0.15); border: 1px solid rgba(196,30,58,0.3); color: var(--accent-light); padding: 5px 14px; border-radius: 20px; font-size: 12px; }
-        .sync-bar { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 12px 20px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .sync-bar { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 12px 20px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
         .sync-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--success); flex-shrink: 0; }
         .sync-dot.off { background: #f44; }
         .sync-dot.load { background: #ff0; animation: pulse 0.5s infinite; }
         @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
         .sync-text { font-size: 12px; color: #888; flex: 1; }
-        .sync-btn { padding: 8px 16px; border: 1px solid var(--border); background: transparent; color: #ccc; border-radius: 8px; cursor: pointer; font-size: 12px; }
-        .sync-btn.save { background: var(--accent); border-color: var(--accent); color: #fff; }
-        .alerts-bar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-        .alert { padding: 10px 15px; border-radius: 8px; font-size: 12px; }
-        .alert-danger { background: rgba(196,30,58,0.2); border: 1px solid var(--danger); color: #ff6b6b; }
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px; }
         .stat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
         .stat-card.accent-card { background: linear-gradient(135deg, rgba(196,30,58,0.2) 0%, rgba(20,20,20,0.98) 100%); border-color: var(--accent); }
@@ -35,7 +30,7 @@
         .stat-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; }
         .stat-value { font-size: 26px; font-weight: 700; color: var(--white); }
         .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
-        @media (max-width:768px) { .main-grid { grid-template-columns: 1fr; } }
+        @media (max-width:768px) { .main-grid { grid-template-columns: 1fr; } .person-stats { grid-template-columns: 1fr; } }
         .panel { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
         .panel-title { font-size: 16px; font-weight: 600; color: var(--white); margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--border); }
         .form-group { margin-bottom: 15px; }
@@ -73,10 +68,19 @@
         .negative { color: #ff4444; }
         .savings-color { color: var(--gold); }
         .btn-delete { background: none; border: 1px solid #2a2a2a; color: #666; padding: 6px 10px; border-radius: 6px; cursor: pointer; }
-        .btn-delete:hover { border-color: var(--danger); color: var(--danger); }
         .empty-state { text-align: center; padding: 40px; color: #666; }
         .toast { position: fixed; bottom: 30px; right: 30px; background: #333; color: #fff; padding: 12px 20px; border-radius: 10px; z-index: 999; opacity: 0; transition: .3s; pointer-events: none; }
         .toast.show { opacity: 1; }
+        .goal-item { background: #0a0a0a; border: 1px solid var(--border); border-radius: 8px; padding: 15px; margin-bottom: 10px; }
+        .goal-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+        .goal-bar { height: 8px; background: #0a0a0a; border-radius: 4px; overflow: hidden; margin-bottom: 5px; }
+        .goal-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--accent-light)); border-radius: 4px; }
+        .payment-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #1a1a1a; flex-wrap: wrap; gap: 5px; }
+        .category-bar { margin-bottom: 12px; }
+        .category-header { display: flex; justify-content: space-between; margin-bottom: 6px; }
+        .bar-container { height: 6px; background: #0a0a0a; border-radius: 3px; overflow: hidden; }
+        .bar-fill { height: 100%; border-radius: 3px; }
+        .bar-food { background: #ff6b6b; } .bar-clothes { background: #a29bfe; } .bar-transport { background: #74b9ff; } .bar-other { background: #636e72; }
     </style>
 </head>
 <body>
@@ -94,11 +98,7 @@
         <div class="sync-bar">
             <div class="sync-dot" id="syncDot"></div>
             <span class="sync-text" id="syncStatus">Загрузка...</span>
-            <button class="sync-btn save" onclick="saveToCloud()">💾 Сохранить в облако</button>
-            <button class="sync-btn" onclick="loadFromCloud()">🔄 Загрузить</button>
         </div>
-
-        <div class="alerts-bar" id="alertsBar"></div>
 
         <div class="stats-grid">
             <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-label">Общий баланс</div><div class="stat-value" id="totalBalance">0 ₽</div></div>
@@ -113,6 +113,7 @@
 
         <div class="tabs">
             <div class="tab active" onclick="switchTab('transactions')">💳 Операции</div>
+            <div class="tab" onclick="switchTab('analytics')">📊 Аналитика</div>
             <div class="tab" onclick="switchTab('goals')">🎯 Цели</div>
             <div class="tab" onclick="switchTab('payments')">📅 Платежи</div>
         </div>
@@ -148,6 +149,13 @@
             <div class="panel"><div class="panel-title">📋 История</div><div class="transaction-list" id="transactionList"><div class="empty-state">Пусто</div></div></div>
         </div>
 
+        <div class="tab-content" id="tab-analytics">
+            <div class="panel">
+                <div class="panel-title">📊 Расходы по категориям</div>
+                <div id="analyticsContent"></div>
+            </div>
+        </div>
+
         <div class="tab-content" id="tab-goals">
             <div class="main-grid">
                 <div class="panel"><div class="panel-title">🎯 Новая цель</div><div class="form-group"><label>Название</label><input type="text" id="goalName" placeholder="Отпуск..."></div><div class="form-group"><label>Сумма</label><input type="number" id="goalAmount" placeholder="100000"></div><button class="btn btn-gold" onclick="addGoal()">Добавить</button></div>
@@ -166,83 +174,43 @@
     <div class="toast" id="toast"></div>
 
     <script>
-        // ============ ХРАНЕНИЕ В БРАУЗЕРЕ + GITHUB ============
-        const RAW_URL = 'https://raw.githubusercontent.com/lolzoff6412/budget/main/data.json';
-        const TOKEN = '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';
-        const API_URL = 'https://api.github.com/repos/lolzoff6412/budget/contents/data.json';
+        // ============ НАСТРОЙКА ============
+        const CLOUD_URL = 'https://api.npoint.io/a30c7a70eb0ae4abc9b3';
+        
+        let transactions = [], savingsTotal = 0, goals = [], payments = [];
+        let selIPerson = 'Даня', selEPerson = 'Даня';
 
-        let transactions = JSON.parse(localStorage.getItem('budget_t') || '[]');
-        let savingsTotal = parseFloat(localStorage.getItem('budget_s') || '0');
-        let goals = JSON.parse(localStorage.getItem('budget_g') || '[]');
-        let payments = JSON.parse(localStorage.getItem('budget_p') || '[]');
-        let selIPerson = 'Даня', selEPerson = 'Даня', fileSHA = null;
-
-        // Сохранение локально
-        function saveLocal() {
-            localStorage.setItem('budget_t', JSON.stringify(transactions));
-            localStorage.setItem('budget_s', savingsTotal.toString());
-            localStorage.setItem('budget_g', JSON.stringify(goals));
-            localStorage.setItem('budget_p', JSON.stringify(payments));
-        }
-
-        // Загрузка из облака (RAW — всегда работает)
-        async function loadFromCloud() {
-            setSync('load', 'Загрузка из облака...');
+        // ============ ЗАГРУЗКА ИЗ ОБЛАКА ============
+        async function loadCloud() {
+            setSync('load', 'Загрузка...');
             try {
-                const r = await fetch(RAW_URL + '?t=' + Date.now());
+                const r = await fetch(CLOUD_URL + '?t=' + Date.now());
                 if (r.ok) {
                     const d = await r.json();
                     transactions = d.transactions || [];
                     savingsTotal = d.savingsTotal || 0;
                     goals = d.goals || [];
                     payments = d.payments || [];
-                    saveLocal();
-                    setSync('on', 'Загружено ✅');
-                    updateUI();
-                    showToast('✅ Данные загружены из облака');
+                    setSync('on', 'Синхронизировано ✅');
                 }
             } catch (e) {
-                setSync('off', 'Офлайн. Локальные данные.');
+                setSync('off', 'Офлайн');
             }
+            updateUI();
         }
 
-        // Сохранение в облако (через API с токеном)
-        async function saveToCloud() {
-            setSync('load', 'Сохранение в облако...');
-            
-            // Сначала получаем SHA файла
+        // ============ СОХРАНЕНИЕ В ОБЛАКО ============
+        async function saveCloud() {
+            setSync('load', 'Сохранение...');
             try {
-                const r = await fetch(API_URL, { headers: { 'Authorization': 'Bearer ' + TOKEN } });
-                if (r.ok) {
-                    const d = await r.json();
-                    fileSHA = d.sha;
-                }
-            } catch (e) {}
-
-            const content = btoa(unescape(encodeURIComponent(JSON.stringify({ transactions, savingsTotal, goals, payments }))));
-            const body = { message: 'update budget', content, branch: 'main' };
-            if (fileSHA) body.sha = fileSHA;
-
-            try {
-                const r = await fetch(API_URL, {
+                await fetch(CLOUD_URL, {
                     method: 'PUT',
-                    headers: { 'Authorization': 'Bearer ' + TOKEN, 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body)
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ transactions, savingsTotal, goals, payments })
                 });
-                if (r.ok) {
-                    const d = await r.json();
-                    fileSHA = d.content.sha;
-                    saveLocal();
-                    setSync('on', 'Сохранено в облаке ✅');
-                    showToast('✅ Сохранено! Можно загрузить на другом устройстве.');
-                } else {
-                    const err = await r.json();
-                    setSync('off', 'Ошибка сохранения');
-                    showToast('❌ ' + (err.message || 'Ошибка'));
-                }
+                setSync('on', 'Сохранено ✅');
             } catch (e) {
-                setSync('off', 'Офлайн. Сохранено локально.');
-                saveLocal();
+                setSync('off', 'Офлайн');
             }
         }
 
@@ -252,7 +220,7 @@
             document.getElementById('syncStatus').textContent = t;
         }
 
-        function showToast(msg) {
+        function toast(msg) {
             const t = document.getElementById('toast');
             t.textContent = msg; t.classList.add('show');
             setTimeout(() => t.classList.remove('show'), 2500);
@@ -273,12 +241,11 @@
         function selIP(p) { selIPerson = p; document.getElementById('ipDanya').className = 'person-btn' + (p === 'Даня' ? ' active-danya' : ''); document.getElementById('ipKotya').className = 'person-btn' + (p === 'Котя' ? ' active-kotya' : ''); }
         function selEP(p) { selEPerson = p; document.getElementById('epDanya').className = 'person-btn' + (p === 'Даня' ? ' active-danya' : ''); document.getElementById('epKotya').className = 'person-btn' + (p === 'Котя' ? ' active-kotya' : ''); }
 
-        function addIncome() {
+        async function addIncome() {
             const a = parseFloat(document.getElementById('incomeAmount').value);
             const d = document.getElementById('incomeDescription').value.trim() || 'Доход';
             if (!a || a <= 0) return alert('Введи сумму!');
             transactions.push({ id: Date.now(), type: 'income', amount: a, description: d, person: selIPerson, date: new Date().toISOString() });
-            // Предложить отложить 15%
             const s15 = Math.round(a * 0.15);
             if (s15 > 0 && confirm('Отложить ' + s15.toLocaleString() + ' ₽ (15%)?')) {
                 transactions.push({ id: Date.now()+1, type: 'savings', amount: s15, description: 'Авто-накопление 15%', person: selIPerson, date: new Date().toISOString() });
@@ -286,10 +253,10 @@
             }
             document.getElementById('incomeAmount').value = '';
             document.getElementById('incomeDescription').value = '';
-            saveLocal(); updateUI();
+            await saveCloud(); updateUI();
         }
 
-        function addExpense() {
+        async function addExpense() {
             const a = parseFloat(document.getElementById('expenseAmount').value);
             const c = document.getElementById('expenseCategory').value;
             const d = document.getElementById('expenseDescription').value.trim() || 'Расход';
@@ -298,38 +265,38 @@
             transactions.push({ id: Date.now(), type: 'expense', amount: a, category: c, description: d, person: selEPerson, date: new Date().toISOString() });
             document.getElementById('expenseAmount').value = '';
             document.getElementById('expenseDescription').value = '';
-            saveLocal(); updateUI();
+            await saveCloud(); updateUI();
         }
 
-        function addSavings() {
+        async function addSavings() {
             const a = parseFloat(document.getElementById('manualSavings').value);
             if (!a || a <= 0) return alert('Введи сумму!');
             if (a > calcBal()) return alert('Недостаточно средств!');
             transactions.push({ id: Date.now(), type: 'savings', amount: a, description: 'Накопление', person: selEPerson, date: new Date().toISOString() });
             savingsTotal += a;
             document.getElementById('manualSavings').value = '';
-            saveLocal(); updateUI();
+            await saveCloud(); updateUI();
         }
 
-        function delTr(id) {
+        async function delTr(id) {
             if (!confirm('Удалить?')) return;
             const t = transactions.find(x => x.id === id);
             if (t && t.type === 'savings') { savingsTotal -= t.amount; if (savingsTotal < 0) savingsTotal = 0; }
             transactions = transactions.filter(x => x.id !== id);
-            saveLocal(); updateUI();
+            await saveCloud(); updateUI();
         }
 
-        function addGoal() {
+        async function addGoal() {
             const n = document.getElementById('goalName').value.trim();
             const a = parseFloat(document.getElementById('goalAmount').value);
             if (!n || !a) return alert('Заполни!');
             goals.push({ id: Date.now(), name: n, target: a, saved: 0 });
             document.getElementById('goalName').value = '';
             document.getElementById('goalAmount').value = '';
-            saveLocal(); updateUI();
+            await saveCloud(); updateUI();
         }
 
-        function addToGoal(id) {
+        async function addToGoal(id) {
             const a = parseFloat(prompt('Сколько отложить?'));
             if (!a || a <= 0) return;
             const g = goals.find(x => x.id === id);
@@ -338,10 +305,10 @@
             g.saved += a;
             transactions.push({ id: Date.now(), type: 'savings', amount: a, description: 'Цель: ' + g.name, person: 'Даня', date: new Date().toISOString() });
             savingsTotal += a;
-            saveLocal(); updateUI();
+            await saveCloud(); updateUI();
         }
 
-        function addPayment() {
+        async function addPayment() {
             const n = document.getElementById('paymentName').value.trim();
             const a = parseFloat(document.getElementById('paymentAmount').value);
             const d = parseInt(document.getElementById('paymentDay').value);
@@ -350,13 +317,15 @@
             document.getElementById('paymentName').value = '';
             document.getElementById('paymentAmount').value = '';
             document.getElementById('paymentDay').value = '';
-            saveLocal(); updateUI();
+            await saveCloud(); updateUI();
         }
+
+        async function togPay(id) { const p = payments.find(x => x.id === id); if (p) { p.paid = !p.paid; await saveCloud(); updateUI(); } }
 
         function switchTab(n) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.querySelectorAll('.tab')[n === 'transactions' ? 0 : n === 'goals' ? 1 : 2].classList.add('active');
+            document.querySelectorAll('.tab')[n === 'transactions' ? 0 : n === 'analytics' ? 1 : n === 'goals' ? 2 : 3].classList.add('active');
             document.getElementById('tab-' + n).classList.add('active');
         }
 
@@ -376,21 +345,14 @@
 
             document.getElementById('goalsList').innerHTML = goals.length ? goals.map(g => {
                 const p = Math.min((g.saved / g.target) * 100, 100);
-                return `<div style="background:#0a0a0a;border:1px solid #2a2a2a;border-radius:8px;padding:12px;margin-bottom:8px;">
-                    <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><strong>🎯 ${g.name}</strong><span>${g.saved.toLocaleString()} / ${g.target.toLocaleString()} ₽</span></div>
-                    <div style="height:6px;background:#0a0a0a;border-radius:3px;overflow:hidden;"><div style="height:100%;width:${p}%;background:linear-gradient(90deg,#d4a574,#ff2d55);border-radius:3px;"></div></div>
-                    <button class="btn btn-gold" style="width:auto;padding:6px 12px;font-size:11px;margin-top:6px;" onclick="addToGoal(${g.id})">+ Пополнить</button>
-                </div>`;
+                return `<div class="goal-item"><div class="goal-header"><strong>🎯 ${g.name}</strong><span>${g.saved.toLocaleString()} / ${g.target.toLocaleString()} ₽</span></div><div class="goal-bar"><div class="goal-fill" style="width:${p}%"></div></div><button class="btn btn-gold btn-sm" style="margin-top:6px;" onclick="addToGoal(${g.id})">+ Пополнить</button></div>`;
             }).join('') : '<div class="empty-state">Нет целей</div>';
 
             const today = new Date().getDate();
             document.getElementById('paymentsList').innerHTML = payments.length ? payments.sort((a, b) => a.day - b.day).map(p => {
                 let cls = p.paid ? 'color:#4a9e6e;' : p.day < today ? 'color:#ff6b6b;' : 'color:#d4a574;';
                 let txt = p.paid ? '✓' : p.day < today ? 'Просрочен' : 'Ожидает';
-                return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid #1a1a1a;">
-                    <div><strong>${p.name}</strong><br><small style="color:#666;">${p.day} число</small></div>
-                    <div><strong>${p.amount.toLocaleString()} ₽</strong> <span style="${cls}font-size:11px;">${txt}</span></div>
-                </div>`;
+                return `<div class="payment-item"><div><strong>${p.name}</strong><br><small style="color:#666;">${p.day} число</small></div><div><strong>${p.amount.toLocaleString()} ₽</strong> <span style="${cls}font-size:11px;">${txt}</span></div><button class="btn btn-sm" style="width:auto;padding:4px 8px;font-size:11px;" onclick="togPay(${p.id})">✓</button></div>`;
             }).join('') : '<div class="empty-state">Нет платежей</div>';
 
             document.getElementById('transactionList').innerHTML = transactions.length ? [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date)).map(t => {
@@ -399,19 +361,18 @@
                 else if (t.type === 'savings') { sign = '🔒'; cls = 'savings-color'; icon = '🔗'; }
                 return `<div class="transaction-item"><div class="transaction-info"><div class="transaction-name">${icon} ${t.description} <small style="color:${t.person==='Даня'?'#4a9eff':'#ff69b4'};">${t.person}</small></div><div class="transaction-meta">${fDate(t.date)}</div></div><div class="transaction-amount ${cls}">${sign} ${t.amount.toLocaleString()} ₽</div><button class="btn-delete" onclick="delTr(${t.id})">✕</button></div>`;
             }).join('') : '<div class="empty-state">Пусто</div>';
+
+            // Аналитика
+            const cats = { 'еда': 0, 'одежда': 0, 'транспорт': 0, 'прочие': 0 };
+            let totalExp = 0;
+            transactions.forEach(t => { if (t.type === 'expense' && cats.hasOwnProperty(t.category)) { cats[t.category] += t.amount; totalExp += t.amount; } });
+            const maxCat = Math.max(...Object.values(cats), 1);
+            document.getElementById('analyticsContent').innerHTML = Object.entries(cats).map(([k, v]) => `
+                <div class="category-bar"><div class="category-header"><span>${k}</span><span>${v.toLocaleString()} ₽</span></div><div class="bar-container"><div class="bar-fill bar-${k==='еда'?'food':k==='одежда'?'clothes':k==='транспорт'?'transport':'other'}" style="width:${(v/maxCat*100)}%"></div></div></div>
+            `).join('') + `<div style="text-align:right;margin-top:10px;color:#888;">Всего: ${totalExp.toLocaleString()} ₽</div>`;
         }
 
-        // Автозагрузка при открытии
-        loadFromCloud();
-
-        document.addEventListener('keypress', e => {
-            if (e.key === 'Enter') {
-                const a = document.activeElement;
-                if (a.id === 'incomeAmount') addIncome();
-                else if (a.id === 'expenseAmount') addExpense();
-                else if (a.id === 'manualSavings') addSavings();
-            }
-        });
+        loadCloud();
     </script>
 </body>
 </html>
