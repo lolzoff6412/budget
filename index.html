@@ -203,6 +203,7 @@
         let transactions = [], savingsTotal = 0, goals = [], payments = [];
         let selIPerson = 'Даня', selEPerson = 'Даня';
 
+        // ============ ЗАГРУЗКА ============
         async function loadCloud() {
             setSync('load', 'Загрузка...');
             try {
@@ -224,6 +225,7 @@
             }
         }
 
+        // ============ СОХРАНЕНИЕ (без checkReminders) ============
         async function saveCloud() {
             setSync('load', 'Сохранение...');
             try {
@@ -236,6 +238,7 @@
             }
         }
 
+        // ============ НАПОМИНАНИЯ (только при загрузке) ============
         function checkReminders() {
             const today = new Date().getDate();
             const remindersBar = document.getElementById('remindersBar');
@@ -253,8 +256,7 @@
             const overduePayments = activePayments.filter(p => p.day < today && p.day > 0);
 
             overduePayments.forEach(p => {
-                html += `
-                <div class="reminder urgent" onclick="switchTab('payments')">
+                html += `<div class="reminder urgent" onclick="switchTab('payments')">
                     <div class="reminder-icon">🚨</div>
                     <div class="reminder-info">
                         <div class="reminder-title">Просрочен: ${p.name}</div>
@@ -266,8 +268,7 @@
             });
 
             todayPayments.forEach(p => {
-                html += `
-                <div class="reminder" onclick="switchTab('payments')">
+                html += `<div class="reminder" onclick="switchTab('payments')">
                     <div class="reminder-icon">📅</div>
                     <div class="reminder-info">
                         <div class="reminder-title">Сегодня: ${p.name}</div>
@@ -279,8 +280,7 @@
             });
 
             tomorrowPayments.forEach(p => {
-                html += `
-                <div class="reminder" onclick="switchTab('payments')" style="opacity:0.9;">
+                html += `<div class="reminder" onclick="switchTab('payments')" style="opacity:0.9;">
                     <div class="reminder-icon">🔔</div>
                     <div class="reminder-info">
                         <div class="reminder-title">Завтра: ${p.name}</div>
@@ -291,8 +291,7 @@
             });
 
             soonPayments.forEach(p => {
-                html += `
-                <div class="reminder" onclick="switchTab('payments')" style="opacity:0.7;">
+                html += `<div class="reminder" onclick="switchTab('payments')" style="opacity:0.7;">
                     <div class="reminder-icon">💡</div>
                     <div class="reminder-info">
                         <div class="reminder-title">Скоро: ${p.name}</div>
@@ -311,6 +310,7 @@
             }
         }
 
+        // ============ ОПЛАТИТЬ ============
         async function markAsPaid(id) {
             const p = payments.find(x => x.id === id);
             if (!p) return;
@@ -326,14 +326,7 @@
             const lastDay = new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0).getDate();
             const newDay = Math.min(p.day, lastDay);
 
-            payments.push({
-                id: Date.now().toString(),
-                name: p.name,
-                amount: p.amount,
-                day: newDay,
-                paid: false
-            });
-
+            payments.push({ id: Date.now().toString(), name: p.name, amount: p.amount, day: newDay, paid: false });
             p.paid = true;
             p.paidDate = today.toISOString();
             
@@ -350,9 +343,11 @@
             await saveCloud();
             toast('✅ «' + p.name + '» оплачен! -' + p.amount.toLocaleString() + ' ₽ | Следующий: ' + newDay + ' число');
             
+            // Перезагружаем страницу чтобы всё обновилось
             setTimeout(() => location.reload(), 1000);
         }
 
+        // ============ ВСПОМОГАТЕЛЬНЫЕ ============
         function setSync(status, text) {
             const dot = document.getElementById('syncDot');
             dot.className = 'sync-dot' + (status === 'off' ? ' off' : status === 'load' ? ' load' : '');
@@ -367,6 +362,7 @@
         function selIP(p) { selIPerson=p; document.getElementById('ipDanya').className='person-btn'+(p==='Даня'?' active-danya':''); document.getElementById('ipKotya').className='person-btn'+(p==='Котя'?' active-kotya':''); }
         function selEP(p) { selEPerson=p; document.getElementById('epDanya').className='person-btn'+(p==='Даня'?' active-danya':''); document.getElementById('epKotya').className='person-btn'+(p==='Котя'?' active-kotya':''); }
 
+        // ============ ОПЕРАЦИИ ============
         async function addIncome() {
             const a=parseFloat(document.getElementById('incomeAmount').value);
             const d=document.getElementById('incomeDescription').value.trim()||'Доход';
@@ -439,8 +435,8 @@
             await saveCloud();updateUI();
         }
 
-        async function togPay(id) { const p=payments.find(x=>x.id===id); if(p){p.paid=!p.paid;await saveCloud();updateUI();checkReminders();} }
-        async function delPay(id) { payments=payments.filter(x=>x.id!==id); await saveCloud();updateUI();checkReminders(); }
+        async function togPay(id) { const p=payments.find(x=>x.id===id); if(p){p.paid=!p.paid;await saveCloud();updateUI();} }
+        async function delPay(id) { payments=payments.filter(x=>x.id!==id); await saveCloud();updateUI(); }
 
         function switchTab(n) {
             document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
