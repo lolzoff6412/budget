@@ -25,6 +25,26 @@
         .sync-dot.load { background: #ff0; animation: pulse 0.5s infinite; }
         @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
         .sync-text { font-size: 12px; color: #888; flex: 1; }
+        
+        /* Напоминания */
+        .reminders-bar { margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px; }
+        .reminder {
+            background: rgba(212,167,116,0.15); border: 1px solid var(--gold);
+            border-radius: 10px; padding: 15px; display: flex; align-items: center;
+            gap: 12px; animation: reminderPulse 3s infinite; cursor: pointer;
+        }
+        .reminder.urgent { background: rgba(196,30,58,0.2); border-color: var(--danger); animation: urgentPulse 1.5s infinite; }
+        @keyframes reminderPulse { 0%,100% { border-color: var(--gold); } 50% { border-color: var(--accent-light); } }
+        @keyframes urgentPulse { 0%,100% { border-color: var(--danger); } 50% { border-color: #ff6b6b; } }
+        .reminder-icon { font-size: 28px; }
+        .reminder-info { flex: 1; }
+        .reminder-title { font-weight: 600; font-size: 14px; }
+        .reminder-meta { font-size: 11px; color: #999; margin-top: 2px; }
+        .reminder-amount { font-weight: 700; font-size: 16px; color: var(--gold); }
+        .reminder.urgent .reminder-amount { color: #ff6b6b; }
+        .reminder-btn { padding: 8px 16px; border-radius: 8px; border: none; font-size: 12px; font-weight: 600; cursor: pointer; background: var(--gold); color: #000; }
+        .reminder-btn.danger { background: var(--danger); color: #fff; }
+
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px; }
         .stat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
         .stat-card.accent-card { background: linear-gradient(135deg, rgba(196,30,58,0.2) 0%, rgba(20,20,20,0.98) 100%); border-color: var(--accent); }
@@ -90,7 +110,7 @@
         <div class="header">
             <div class="header-content">
                 <div>
-                    <div class="title-block"><h1>支配の予算 • Бюджет Дани и Коти</h1><div class="jp-title">Синхронизация через Firebase</div></div>
+                    <div class="title-block"><h1>支配の予算 • Бюджет Дани и Коти</h1><div class="jp-title">Синхронизация Firebase</div></div>
                     <div class="salary-dates"><span class="salary-date">💰 10</span><span class="salary-date">💰 14</span><span class="salary-date">💰 25</span><span class="salary-date">💰 29</span></div>
                 </div>
                 <div style="font-size:60px;opacity:0.3;">🐕</div>
@@ -101,6 +121,9 @@
             <div class="sync-dot" id="syncDot"></div>
             <span class="sync-text" id="syncStatus">Загрузка...</span>
         </div>
+
+        <!-- НАПОМИНАНИЯ О ПЛАТЕЖАХ -->
+        <div class="reminders-bar" id="remindersBar"></div>
 
         <div class="stats-grid">
             <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-label">Общий баланс</div><div class="stat-value" id="totalBalance">0 ₽</div></div>
@@ -168,65 +191,126 @@
     <div class="toast" id="toast"></div>
 
     <script>
-        // ============ FIREBASE INIT ============
-        const firebaseConfig = {
+        // ============ FIREBASE ============
+        firebase.initializeApp({
             apiKey: "AIzaSyC1ffR-58S0v7jrcc-KMVF01nfZA4Hl8SU",
             authDomain: "danila-4683f.firebaseapp.com",
             projectId: "danila-4683f",
             storageBucket: "danila-4683f.firebasestorage.app",
             messagingSenderId: "762713634817",
             appId: "1:762713634817:web:8a45f4dc82ca820fb6a800"
-        };
-
-        firebase.initializeApp(firebaseConfig);
+        });
         const db = firebase.firestore();
 
-        // ============ ДАННЫЕ ============
-        let transactions = [];
-        let savingsTotal = 0;
-        let goals = [];
-        let payments = [];
+        let transactions = [], savingsTotal = 0, goals = [], payments = [];
         let selIPerson = 'Даня', selEPerson = 'Даня';
 
-        // ============ ЗАГРУЗКА ИЗ FIREBASE ============
         async function loadCloud() {
-            setSync('load', 'Загрузка из Firebase...');
+            setSync('load', 'Загрузка...');
             try {
-                const docRef = db.collection('budgets').doc('main');
-                const snap = await docRef.get();
+                const snap = await db.collection('budgets').doc('main').get();
                 if (snap.exists) {
                     const data = snap.data();
                     transactions = data.transactions || [];
                     savingsTotal = data.savingsTotal || 0;
                     goals = data.goals || [];
                     payments = data.payments || [];
-                    setSync('on', 'Firebase синхронизирован ✅');
+                    setSync('on', 'Firebase ✅');
                 } else {
-                    setSync('on', 'Новая база данных');
+                    setSync('on', 'Новая база');
                 }
                 updateUI();
+                checkReminders();
             } catch (e) {
-                console.error('Firebase load error:', e);
-                setSync('off', 'Ошибка Firebase: ' + e.message);
+                setSync('off', 'Ошибка: ' + e.message);
             }
         }
 
-        // ============ СОХРАНЕНИЕ В FIREBASE ============
         async function saveCloud() {
             setSync('load', 'Сохранение...');
             try {
-                const docRef = db.collection('budgets').doc('main');
-                await docRef.set({
-                    transactions,
-                    savingsTotal,
-                    goals,
-                    payments,
-                    updatedAt: Date.now()
+                await db.collection('budgets').doc('main').set({
+                    transactions, savingsTotal, goals, payments, updatedAt: Date.now()
                 });
-                setSync('on', 'Firebase сохранено ✅');
+                setSync('on', 'Firebase ✅');
+                checkReminders();
             } catch (e) {
-                console.error('Firebase save error:', e);
-                setSync('off', 'Ошибка сохранения: ' + e.message);
+                setSync('off', 'Ошибка: ' + e.message);
+            }
+        }
+
+        // ============ НАПОМИНАНИЯ ============
+        function checkReminders() {
+            const today = new Date().getDate();
+            const remindersBar = document.getElementById('remindersBar');
+            let html = '';
+
+            // Проверяем сегодняшние платежи
+            const todayPayments = payments.filter(p => !p.paid && p.day === today);
+            // Проверяем завтрашние платежи
+            const tomorrowPayments = payments.filter(p => !p.paid && p.day === today + 1);
+            // Проверяем просроченные
+            const overduePayments = payments.filter(p => !p.paid && p.day < today && p.day > 0);
+
+            // Просроченные — красные
+            overduePayments.forEach(p => {
+                html += `
+                <div class="reminder urgent" onclick="switchTab('payments')">
+                    <div class="reminder-icon">🚨</div>
+                    <div class="reminder-info">
+                        <div class="reminder-title">Просрочен платёж: ${p.name}</div>
+                        <div class="reminder-meta">Был ${p.day} числа • Пора оплатить!</div>
+                    </div>
+                    <div class="reminder-amount">${p.amount.toLocaleString()} ₽</div>
+                    <button class="reminder-btn danger" onclick="event.stopPropagation(); markAsPaid('${p.id}')">✓ Оплатить</button>
+                </div>`;
+            });
+
+            // Сегодняшние — жёлтые
+            todayPayments.forEach(p => {
+                html += `
+                <div class="reminder" onclick="switchTab('payments')">
+                    <div class="reminder-icon">📅</div>
+                    <div class="reminder-info">
+                        <div class="reminder-title">Сегодня платёж: ${p.name}</div>
+                        <div class="reminder-meta">${p.day} число • Не забудь оплатить!</div>
+                    </div>
+                    <div class="reminder-amount">${p.amount.toLocaleString()} ₽</div>
+                    <button class="reminder-btn" onclick="event.stopPropagation(); markAsPaid('${p.id}')">✓ Оплатить</button>
+                </div>`;
+            });
+
+            // Завтрашние — предупреждение
+            tomorrowPayments.forEach(p => {
+                html += `
+                <div class="reminder" onclick="switchTab('payments')" style="opacity:0.8;">
+                    <div class="reminder-icon">🔔</div>
+                    <div class="reminder-info">
+                        <div class="reminder-title">Завтра платёж: ${p.name}</div>
+                        <div class="reminder-meta">${p.day} число • Подготовь ${p.amount.toLocaleString()} ₽</div>
+                    </div>
+                    <div class="reminder-amount">${p.amount.toLocaleString()} ₽</div>
+                </div>`;
+            });
+
+            remindersBar.innerHTML = html;
+
+            // Если есть просроченные — показать toast
+            if (overduePayments.length > 0) {
+                toast('🚨 Внимание! Есть просроченные платежи!');
+            } else if (todayPayments.length > 0) {
+                toast('📅 Сегодня нужно оплатить: ' + todayPayments.map(p => p.name).join(', '));
+            }
+        }
+
+        async function markAsPaid(id) {
+            const p = payments.find(x => x.id === id);
+            if (p) {
+                p.paid = true;
+                await saveCloud();
+                updateUI();
+                checkReminders();
+                toast('✅ Платёж «' + p.name + '» отмечен как оплаченный');
             }
         }
 
@@ -236,7 +320,7 @@
             document.getElementById('syncStatus').textContent = text;
         }
 
-        function toast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); }
+        function toast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000); }
         function calcBal() { return transactions.reduce((s,t)=>t.type==='income'?s+t.amount:s-t.amount,0); }
         function getDays() { const n=new Date(); const l=new Date(n.getFullYear(),n.getMonth()+1,0); return Math.ceil((l-n)/86400000)||1; }
         function getStats() { let di=0,de=0,ki=0,ke=0; transactions.forEach(t=>{if(t.person==='Даня'){if(t.type==='income')di+=t.amount;else de+=t.amount;}else{if(t.type==='income')ki+=t.amount;else ke+=t.amount;}}); return {di,de,ki,ke}; }
@@ -248,9 +332,9 @@
             const a=parseFloat(document.getElementById('incomeAmount').value);
             const d=document.getElementById('incomeDescription').value.trim()||'Доход';
             if(!a||a<=0)return alert('Введи сумму!');
-            transactions.push({id:Date.now(),type:'income',amount:a,description:d,person:selIPerson,date:new Date().toISOString()});
+            transactions.push({id:Date.now().toString(),type:'income',amount:a,description:d,person:selIPerson,date:new Date().toISOString()});
             const s15=Math.round(a*0.15);
-            if(s15>0&&confirm('Отложить '+s15.toLocaleString()+' ₽ (15%)?')){transactions.push({id:Date.now()+1,type:'savings',amount:s15,description:'Авто-накопление 15%',person:selIPerson,date:new Date().toISOString()});savingsTotal+=s15;}
+            if(s15>0&&confirm('Отложить '+s15.toLocaleString()+' ₽ (15%)?')){transactions.push({id:(Date.now()+1).toString(),type:'savings',amount:s15,description:'Авто-накопление 15%',person:selIPerson,date:new Date().toISOString()});savingsTotal+=s15;}
             document.getElementById('incomeAmount').value='';document.getElementById('incomeDescription').value='';
             await saveCloud();updateUI();
         }
@@ -261,7 +345,7 @@
             const d=document.getElementById('expenseDescription').value.trim()||'Расход';
             if(!a||a<=0)return alert('Введи сумму!');
             if(a>calcBal())return alert('Недостаточно средств!');
-            transactions.push({id:Date.now(),type:'expense',amount:a,category:c,description:d,person:selEPerson,date:new Date().toISOString()});
+            transactions.push({id:Date.now().toString(),type:'expense',amount:a,category:c,description:d,person:selEPerson,date:new Date().toISOString()});
             document.getElementById('expenseAmount').value='';document.getElementById('expenseDescription').value='';
             await saveCloud();updateUI();
         }
@@ -270,7 +354,7 @@
             const a=parseFloat(document.getElementById('manualSavings').value);
             if(!a||a<=0)return alert('Введи сумму!');
             if(a>calcBal())return alert('Недостаточно средств!');
-            transactions.push({id:Date.now(),type:'savings',amount:a,description:'Накопление',person:selEPerson,date:new Date().toISOString()});
+            transactions.push({id:Date.now().toString(),type:'savings',amount:a,description:'Накопление',person:selEPerson,date:new Date().toISOString()});
             savingsTotal+=a;document.getElementById('manualSavings').value='';
             await saveCloud();updateUI();
         }
@@ -287,7 +371,7 @@
             const n=document.getElementById('goalName').value.trim();
             const a=parseFloat(document.getElementById('goalAmount').value);
             if(!n||!a)return alert('Заполни!');
-            goals.push({id:Date.now(),name:n,target:a,saved:0});
+            goals.push({id:Date.now().toString(),name:n,target:a,saved:0});
             document.getElementById('goalName').value='';document.getElementById('goalAmount').value='';
             await saveCloud();updateUI();
         }
@@ -299,7 +383,7 @@
             if(!g)return;
             if(a>calcBal())return alert('Недостаточно средств!');
             g.saved+=a;
-            transactions.push({id:Date.now(),type:'savings',amount:a,description:'Цель: '+g.name,person:'Даня',date:new Date().toISOString()});
+            transactions.push({id:Date.now().toString(),type:'savings',amount:a,description:'Цель: '+g.name,person:'Даня',date:new Date().toISOString()});
             savingsTotal+=a;
             await saveCloud();updateUI();
         }
@@ -311,18 +395,19 @@
             const a=parseFloat(document.getElementById('paymentAmount').value);
             const d=parseInt(document.getElementById('paymentDay').value);
             if(!n||!a||!d||d<1||d>31)return alert('Заполни!');
-            payments.push({id:Date.now(),name:n,amount:a,day:d,paid:false});
+            payments.push({id:Date.now().toString(),name:n,amount:a,day:d,paid:false});
             document.getElementById('paymentName').value='';document.getElementById('paymentAmount').value='';document.getElementById('paymentDay').value='';
             await saveCloud();updateUI();
         }
 
-        async function togPay(id) { const p=payments.find(x=>x.id===id); if(p){p.paid=!p.paid;await saveCloud();updateUI();} }
-        async function delPay(id) { payments=payments.filter(x=>x.id!==id); await saveCloud();updateUI(); }
+        async function togPay(id) { const p=payments.find(x=>x.id===id); if(p){p.paid=!p.paid;await saveCloud();updateUI();checkReminders();} }
+        async function delPay(id) { payments=payments.filter(x=>x.id!==id); await saveCloud();updateUI();checkReminders(); }
 
         function switchTab(n) {
             document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
-            document.querySelectorAll('.tab')[n==='transactions'?0:n==='analytics'?1:n==='goals'?2:3].classList.add('active');
+            const tabs = {'transactions':0,'analytics':1,'goals':2,'payments':3};
+            document.querySelectorAll('.tab')[tabs[n]].classList.add('active');
             document.getElementById('tab-'+n).classList.add('active');
         }
 
@@ -330,11 +415,6 @@
             try {
                 const {jsPDF}=window.jspdf;const doc=new jsPDF();const s=getStats();
                 doc.setFontSize(16);doc.setTextColor(196,30,58);doc.text('Budget Danya & Kotya',20,20);
-                doc.setFontSize(11);doc.setTextColor(100);doc.text(new Date().toLocaleString('ru-RU'),20,28);
-                doc.text('Balance: '+calcBal().toLocaleString()+' RUB',20,42);
-                doc.text('Savings: '+savingsTotal.toLocaleString()+' RUB',20,52);
-                doc.setTextColor(74,158,255);doc.text('Danya: +'+s.di.toLocaleString()+' / -'+s.de.toLocaleString(),20,68);
-                doc.setTextColor(255,105,180);doc.text('Kotya: +'+s.ki.toLocaleString()+' / -'+s.ke.toLocaleString(),20,78);
                 doc.save('budget_report.pdf');toast('📄 Отчёт готов!');
             } catch(e) { alert('Нужен интернет для PDF'); }
         }
@@ -349,12 +429,12 @@
             document.getElementById('kotyaIncome').textContent=s.ki.toLocaleString()+' ₽';
             document.getElementById('kotyaExpense').textContent=s.ke.toLocaleString()+' ₽';
 
-            document.getElementById('goalsList').innerHTML=goals.length?goals.map(g=>{const p=Math.min((g.saved/g.target)*100,100);const d=daily>0?Math.ceil((g.target-g.saved)/(daily*0.3)):'∞';return `<div class="goal-item"><div class="goal-header"><strong>🎯 ${g.name}</strong><span>${g.saved.toLocaleString()} / ${g.target.toLocaleString()} ₽</span></div><div class="goal-bar"><div class="goal-fill" style="width:${p}%"></div></div><div style="font-size:11px;color:#666;display:flex;justify-content:space-between;"><span>${Math.round(p)}%</span><span>~${d} дн.</span></div><button class="btn btn-gold btn-sm" style="margin-top:6px;" onclick="addToGoal(${g.id})">+ Пополнить</button><button class="btn btn-sm" style="margin-top:4px;background:transparent;border:1px solid #333;color:#888;" onclick="delGoal(${g.id})">Удалить</button></div>`;}).join(''):'<div class="empty-state">Нет целей</div>';
+            document.getElementById('goalsList').innerHTML=goals.length?goals.map(g=>{const p=Math.min((g.saved/g.target)*100,100);const d=daily>0?Math.ceil((g.target-g.saved)/(daily*0.3)):'∞';return `<div class="goal-item"><div class="goal-header"><strong>🎯 ${g.name}</strong><span>${g.saved.toLocaleString()} / ${g.target.toLocaleString()} ₽</span></div><div class="goal-bar"><div class="goal-fill" style="width:${p}%"></div></div><div style="font-size:11px;color:#666;display:flex;justify-content:space-between;"><span>${Math.round(p)}%</span><span>~${d} дн.</span></div><button class="btn btn-gold btn-sm" style="margin-top:6px;" onclick="addToGoal('${g.id}')">+ Пополнить</button><button class="btn btn-sm" style="margin-top:4px;background:transparent;border:1px solid #333;color:#888;" onclick="delGoal('${g.id}')">Удалить</button></div>`;}).join(''):'<div class="empty-state">Нет целей</div>';
 
             const today=new Date().getDate();
-            document.getElementById('paymentsList').innerHTML=payments.length?payments.sort((a,b)=>a.day-b.day).map(p=>{let cls=p.paid?'status-paid':p.day<today?'status-overdue':'status-pending';let txt=p.paid?'Оплачен':p.day<today?'Просрочен':'Ожидает';let bg=p.paid?'rgba(74,158,110,0.2)':p.day<today?'rgba(196,30,58,0.2)':'rgba(212,167,116,0.2)';let c=p.paid?'#4a9e6e':p.day<today?'#ff6b6b':'#d4a574';return `<div class="payment-item"><div><strong>${p.name}</strong><br><small style="color:#666;">${p.day} число</small></div><div><strong>${p.amount.toLocaleString()} ₽</strong></div><span style="background:${bg};color:${c};padding:3px 8px;border-radius:8px;font-size:10px;">${txt}</span><button class="btn btn-sm" style="width:auto;padding:4px 8px;font-size:10px;" onclick="togPay(${p.id})">✓</button><button class="btn-delete" onclick="delPay(${p.id})">✕</button></div>`;}).join(''):'<div class="empty-state">Нет платежей</div>';
+            document.getElementById('paymentsList').innerHTML=payments.length?payments.sort((a,b)=>a.day-b.day).map(p=>{let cls=p.paid?'status-paid':p.day<today?'status-overdue':'status-pending';let txt=p.paid?'Оплачен':p.day<today?'Просрочен':'Ожидает';let bg=p.paid?'rgba(74,158,110,0.2)':p.day<today?'rgba(196,30,58,0.2)':'rgba(212,167,116,0.2)';let c=p.paid?'#4a9e6e':p.day<today?'#ff6b6b':'#d4a574';return `<div class="payment-item"><div><strong>${p.name}</strong><br><small style="color:#666;">${p.day} число</small></div><div><strong>${p.amount.toLocaleString()} ₽</strong></div><span style="background:${bg};color:${c};padding:3px 8px;border-radius:8px;font-size:10px;">${txt}</span><button class="btn btn-sm" style="width:auto;padding:4px 8px;font-size:10px;" onclick="togPay('${p.id}')">✓</button><button class="btn-delete" onclick="delPay('${p.id}')">✕</button></div>`;}).join(''):'<div class="empty-state">Нет платежей</div>';
 
-            document.getElementById('transactionList').innerHTML=transactions.length?[...transactions].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(t=>{let icon='💰',cls='positive',sign='+';let tag=t.person==='Даня'?'<span style="display:inline-block;padding:1px 6px;border-radius:6px;font-size:9px;background:rgba(74,158,255,0.2);color:#4a9eff;">Даня</span>':'<span style="display:inline-block;padding:1px 6px;border-radius:6px;font-size:9px;background:rgba(255,105,180,0.2);color:#ff69b4;">Котя</span>';if(t.type==='expense'){sign='-';cls='negative';icon={'еда':'🍜','одежда':'👘','транспорт':'🚃','прочие':'🗂️'}[t.category]||'📦';}else if(t.type==='savings'){sign='🔒';cls='savings-color';icon='🔗';}return `<div class="transaction-item"><div class="transaction-info"><div class="transaction-name">${icon} ${t.description} ${tag}</div><div class="transaction-meta">${fDate(t.date)}</div></div><div class="transaction-amount ${cls}">${sign} ${t.amount.toLocaleString()} ₽</div><button class="btn-delete" onclick="delTr(${t.id})">✕</button></div>`;}).join(''):'<div class="empty-state">Пусто</div>';
+            document.getElementById('transactionList').innerHTML=transactions.length?[...transactions].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(t=>{let icon='💰',cls='positive',sign='+';let tag=t.person==='Даня'?'<span style="display:inline-block;padding:1px 6px;border-radius:6px;font-size:9px;background:rgba(74,158,255,0.2);color:#4a9eff;">Даня</span>':'<span style="display:inline-block;padding:1px 6px;border-radius:6px;font-size:9px;background:rgba(255,105,180,0.2);color:#ff69b4;">Котя</span>';if(t.type==='expense'){sign='-';cls='negative';icon={'еда':'🍜','одежда':'👘','транспорт':'🚃','прочие':'🗂️'}[t.category]||'📦';}else if(t.type==='savings'){sign='🔒';cls='savings-color';icon='🔗';}return `<div class="transaction-item"><div class="transaction-info"><div class="transaction-name">${icon} ${t.description} ${tag}</div><div class="transaction-meta">${fDate(t.date)}</div></div><div class="transaction-amount ${cls}">${sign} ${t.amount.toLocaleString()} ₽</div><button class="btn-delete" onclick="delTr('${t.id}')">✕</button></div>`;}).join(''):'<div class="empty-state">Пусто</div>';
 
             const cats={'еда':0,'одежда':0,'транспорт':0,'прочие':0};let totalExp=0;
             transactions.forEach(t=>{if(t.type==='expense'&&cats.hasOwnProperty(t.category)){cats[t.category]+=t.amount;totalExp+=t.amount;}});
@@ -364,7 +444,6 @@
 
         document.addEventListener('keypress',e=>{if(e.key==='Enter'){const a=document.activeElement;if(a.id==='incomeAmount'||a.id==='incomeDescription')addIncome();else if(a.id==='expenseAmount'||a.id==='expenseDescription')addExpense();else if(a.id==='manualSavings')addSavings();else if(a.id==='goalName'||a.id==='goalAmount')addGoal();else if(a.id==='paymentName'||a.id==='paymentAmount'||a.id==='paymentDay')addPayment();}});
 
-        // ЗАПУСК
         loadCloud();
     </script>
 </body>
