@@ -201,23 +201,34 @@ let payments = [];
         let selIPerson = 'Даня', selEPerson = 'Даня';
         let pendingSavings = 0;
 
-       async function save() {
+      async function save() {
+    try {
 
-    const data = {
-        transactions,
-        savingsTotal,
-        goals,
-        payments,
-        updatedAt: Date.now()
-    };
+        const data = {
+            transactions,
+            savingsTotal,
+            goals,
+            payments,
+            updatedAt: Date.now()
+        };
 
-await window.setDoc(
-    window.doc(window.db, "budget", "main"),
-    data
-);
+        await window.setDoc(
+            window.doc(window.db, "budget", "main"),
+            data
+        );
 
-    document.getElementById('syncStatus').textContent =
-        '☁️ Firebase синхронизирован';
+        document.getElementById('syncStatus').textContent =
+            '☁️ Firebase синхронизирован';
+
+    } catch (e) {
+
+        console.error("SAVE ERROR:", e);
+
+        alert(
+            "Ошибка сохранения:\n" +
+            e.message
+        );
+    }
 }
 
         function toast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); }
