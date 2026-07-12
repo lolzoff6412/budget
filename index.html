@@ -4,34 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Бюджет Дани и Коти | 支配の予算</title>
-    <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
-import {
-  getFirestore,
-  doc,
-  getDoc,
-  setDoc
-} from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyC1ffR-58S0v7jrcc-KMVF01nfZA4Hl8SU",
-  authDomain: "danila-4683f.firebaseapp.com",
-  projectId: "danila-4683f",
-  storageBucket: "danila-4683f.firebasestorage.app",
-  messagingSenderId: "762713634817",
-  appId: "1:762713634817:web:8a45f4dc82ca820fb6a800"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-        console.log("Firebase OK");
-console.log(firebaseConfig.projectId);
-
-window.db = db;
-window.doc = doc;
-window.getDoc = getDoc;
-window.setDoc = setDoc;
-</script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { --bg: #0a0a0a; --panel: #1a1a1a; --text: #e0e0e0; --accent: #c41e3a; --accent-light: #ff2d55; --gold: #d4a574; --white: #ffffff; --card-bg: #141414; --border: #2a2a2a; --success: #4a9e6e; --danger: #c41e3a; --danya: #4a9eff; --kotya: #ff69b4; }
@@ -116,7 +90,7 @@ window.setDoc = setDoc;
         <div class="header">
             <div class="header-content">
                 <div>
-                    <div class="title-block"><h1>支配の予算 • Бюджет Дани и Коти</h1><div class="jp-title">Автосинхронизация</div></div>
+                    <div class="title-block"><h1>支配の予算 • Бюджет Дани и Коти</h1><div class="jp-title">Синхронизация через Firebase</div></div>
                     <div class="salary-dates"><span class="salary-date">💰 10</span><span class="salary-date">💰 14</span><span class="salary-date">💰 25</span><span class="salary-date">💰 29</span></div>
                 </div>
                 <div style="font-size:60px;opacity:0.3;">🐕</div>
@@ -194,42 +168,73 @@ window.setDoc = setDoc;
     <div class="toast" id="toast"></div>
 
     <script>
-let transactions = [];
-let savingsTotal = 0;
-let goals = [];
-let payments = [];
-        let selIPerson = 'Даня', selEPerson = 'Даня';
-        let pendingSavings = 0;
-
-      async function save() {
-    try {
-
-        const data = {
-            transactions,
-            savingsTotal,
-            goals,
-            payments,
-            updatedAt: Date.now()
+        // ============ FIREBASE INIT ============
+        const firebaseConfig = {
+            apiKey: "AIzaSyC1ffR-58S0v7jrcc-KMVF01nfZA4Hl8SU",
+            authDomain: "danila-4683f.firebaseapp.com",
+            projectId: "danila-4683f",
+            storageBucket: "danila-4683f.firebasestorage.app",
+            messagingSenderId: "762713634817",
+            appId: "1:762713634817:web:8a45f4dc82ca820fb6a800"
         };
 
-        await window.setDoc(
-            window.doc(window.db, "budget", "main"),
-            data
-        );
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
 
-        document.getElementById('syncStatus').textContent =
-            '☁️ Firebase синхронизирован';
+        // ============ ДАННЫЕ ============
+        let transactions = [];
+        let savingsTotal = 0;
+        let goals = [];
+        let payments = [];
+        let selIPerson = 'Даня', selEPerson = 'Даня';
 
-    } catch (e) {
+        // ============ ЗАГРУЗКА ИЗ FIREBASE ============
+        async function loadCloud() {
+            setSync('load', 'Загрузка из Firebase...');
+            try {
+                const docRef = db.collection('budgets').doc('main');
+                const snap = await docRef.get();
+                if (snap.exists) {
+                    const data = snap.data();
+                    transactions = data.transactions || [];
+                    savingsTotal = data.savingsTotal || 0;
+                    goals = data.goals || [];
+                    payments = data.payments || [];
+                    setSync('on', 'Firebase синхронизирован ✅');
+                } else {
+                    setSync('on', 'Новая база данных');
+                }
+                updateUI();
+            } catch (e) {
+                console.error('Firebase load error:', e);
+                setSync('off', 'Ошибка Firebase: ' + e.message);
+            }
+        }
 
-        console.error("SAVE ERROR:", e);
+        // ============ СОХРАНЕНИЕ В FIREBASE ============
+        async function saveCloud() {
+            setSync('load', 'Сохранение...');
+            try {
+                const docRef = db.collection('budgets').doc('main');
+                await docRef.set({
+                    transactions,
+                    savingsTotal,
+                    goals,
+                    payments,
+                    updatedAt: Date.now()
+                });
+                setSync('on', 'Firebase сохранено ✅');
+            } catch (e) {
+                console.error('Firebase save error:', e);
+                setSync('off', 'Ошибка сохранения: ' + e.message);
+            }
+        }
 
-        alert(
-            "Ошибка сохранения:\n" +
-            e.message
-        );
-    }
-}
+        function setSync(status, text) {
+            const dot = document.getElementById('syncDot');
+            dot.className = 'sync-dot' + (status === 'off' ? ' off' : status === 'load' ? ' load' : '');
+            document.getElementById('syncStatus').textContent = text;
+        }
 
         function toast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); }
         function calcBal() { return transactions.reduce((s,t)=>t.type==='income'?s+t.amount:s-t.amount,0); }
@@ -239,18 +244,18 @@ let payments = [];
         function selIP(p) { selIPerson=p; document.getElementById('ipDanya').className='person-btn'+(p==='Даня'?' active-danya':''); document.getElementById('ipKotya').className='person-btn'+(p==='Котя'?' active-kotya':''); }
         function selEP(p) { selEPerson=p; document.getElementById('epDanya').className='person-btn'+(p==='Даня'?' active-danya':''); document.getElementById('epKotya').className='person-btn'+(p==='Котя'?' active-kotya':''); }
 
-        function addIncome() {
+        async function addIncome() {
             const a=parseFloat(document.getElementById('incomeAmount').value);
             const d=document.getElementById('incomeDescription').value.trim()||'Доход';
             if(!a||a<=0)return alert('Введи сумму!');
             transactions.push({id:Date.now(),type:'income',amount:a,description:d,person:selIPerson,date:new Date().toISOString()});
-            pendingSavings=Math.round(a*0.15);
-            if(pendingSavings>0&&confirm('Отложить '+pendingSavings.toLocaleString()+' ₽ (15%)?')){transactions.push({id:Date.now()+1,type:'savings',amount:pendingSavings,description:'Авто-накопление 15%',person:selIPerson,date:new Date().toISOString()});savingsTotal+=pendingSavings;}
+            const s15=Math.round(a*0.15);
+            if(s15>0&&confirm('Отложить '+s15.toLocaleString()+' ₽ (15%)?')){transactions.push({id:Date.now()+1,type:'savings',amount:s15,description:'Авто-накопление 15%',person:selIPerson,date:new Date().toISOString()});savingsTotal+=s15;}
             document.getElementById('incomeAmount').value='';document.getElementById('incomeDescription').value='';
-            save();updateUI();
+            await saveCloud();updateUI();
         }
 
-        function addExpense() {
+        async function addExpense() {
             const a=parseFloat(document.getElementById('expenseAmount').value);
             const c=document.getElementById('expenseCategory').value;
             const d=document.getElementById('expenseDescription').value.trim()||'Расход';
@@ -258,36 +263,36 @@ let payments = [];
             if(a>calcBal())return alert('Недостаточно средств!');
             transactions.push({id:Date.now(),type:'expense',amount:a,category:c,description:d,person:selEPerson,date:new Date().toISOString()});
             document.getElementById('expenseAmount').value='';document.getElementById('expenseDescription').value='';
-            save();updateUI();
+            await saveCloud();updateUI();
         }
 
-        function addSavings() {
+        async function addSavings() {
             const a=parseFloat(document.getElementById('manualSavings').value);
             if(!a||a<=0)return alert('Введи сумму!');
             if(a>calcBal())return alert('Недостаточно средств!');
             transactions.push({id:Date.now(),type:'savings',amount:a,description:'Накопление',person:selEPerson,date:new Date().toISOString()});
             savingsTotal+=a;document.getElementById('manualSavings').value='';
-            save();updateUI();
+            await saveCloud();updateUI();
         }
 
-        function delTr(id) {
+        async function delTr(id) {
             if(!confirm('Удалить?'))return;
             const t=transactions.find(x=>x.id===id);
             if(t&&t.type==='savings'){savingsTotal-=t.amount;if(savingsTotal<0)savingsTotal=0;}
             transactions=transactions.filter(x=>x.id!==id);
-            save();updateUI();
+            await saveCloud();updateUI();
         }
 
-        function addGoal() {
+        async function addGoal() {
             const n=document.getElementById('goalName').value.trim();
             const a=parseFloat(document.getElementById('goalAmount').value);
             if(!n||!a)return alert('Заполни!');
             goals.push({id:Date.now(),name:n,target:a,saved:0});
             document.getElementById('goalName').value='';document.getElementById('goalAmount').value='';
-            save();updateUI();
+            await saveCloud();updateUI();
         }
 
-        function addToGoal(id) {
+        async function addToGoal(id) {
             const a=parseFloat(prompt('Сколько отложить?'));
             if(!a||a<=0)return;
             const g=goals.find(x=>x.id===id);
@@ -296,23 +301,23 @@ let payments = [];
             g.saved+=a;
             transactions.push({id:Date.now(),type:'savings',amount:a,description:'Цель: '+g.name,person:'Даня',date:new Date().toISOString()});
             savingsTotal+=a;
-            save();updateUI();
+            await saveCloud();updateUI();
         }
 
-        function delGoal(id) { goals=goals.filter(x=>x.id!==id); save();updateUI(); }
+        async function delGoal(id) { goals=goals.filter(x=>x.id!==id); await saveCloud();updateUI(); }
 
-        function addPayment() {
+        async function addPayment() {
             const n=document.getElementById('paymentName').value.trim();
             const a=parseFloat(document.getElementById('paymentAmount').value);
             const d=parseInt(document.getElementById('paymentDay').value);
             if(!n||!a||!d||d<1||d>31)return alert('Заполни!');
             payments.push({id:Date.now(),name:n,amount:a,day:d,paid:false});
             document.getElementById('paymentName').value='';document.getElementById('paymentAmount').value='';document.getElementById('paymentDay').value='';
-            save();updateUI();
+            await saveCloud();updateUI();
         }
 
-        function togPay(id) { const p=payments.find(x=>x.id===id); if(p){p.paid=!p.paid;save();updateUI();} }
-        function delPay(id) { payments=payments.filter(x=>x.id!==id); save();updateUI(); }
+        async function togPay(id) { const p=payments.find(x=>x.id===id); if(p){p.paid=!p.paid;await saveCloud();updateUI();} }
+        async function delPay(id) { payments=payments.filter(x=>x.id!==id); await saveCloud();updateUI(); }
 
         function switchTab(n) {
             document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
@@ -343,65 +348,23 @@ let payments = [];
             document.getElementById('danyaExpense').textContent=s.de.toLocaleString()+' ₽';
             document.getElementById('kotyaIncome').textContent=s.ki.toLocaleString()+' ₽';
             document.getElementById('kotyaExpense').textContent=s.ke.toLocaleString()+' ₽';
-            document.getElementById('syncStatus').textContent='Данные в браузере ✅';
 
             document.getElementById('goalsList').innerHTML=goals.length?goals.map(g=>{const p=Math.min((g.saved/g.target)*100,100);const d=daily>0?Math.ceil((g.target-g.saved)/(daily*0.3)):'∞';return `<div class="goal-item"><div class="goal-header"><strong>🎯 ${g.name}</strong><span>${g.saved.toLocaleString()} / ${g.target.toLocaleString()} ₽</span></div><div class="goal-bar"><div class="goal-fill" style="width:${p}%"></div></div><div style="font-size:11px;color:#666;display:flex;justify-content:space-between;"><span>${Math.round(p)}%</span><span>~${d} дн.</span></div><button class="btn btn-gold btn-sm" style="margin-top:6px;" onclick="addToGoal(${g.id})">+ Пополнить</button><button class="btn btn-sm" style="margin-top:4px;background:transparent;border:1px solid #333;color:#888;" onclick="delGoal(${g.id})">Удалить</button></div>`;}).join(''):'<div class="empty-state">Нет целей</div>';
 
             const today=new Date().getDate();
             document.getElementById('paymentsList').innerHTML=payments.length?payments.sort((a,b)=>a.day-b.day).map(p=>{let cls=p.paid?'status-paid':p.day<today?'status-overdue':'status-pending';let txt=p.paid?'Оплачен':p.day<today?'Просрочен':'Ожидает';let bg=p.paid?'rgba(74,158,110,0.2)':p.day<today?'rgba(196,30,58,0.2)':'rgba(212,167,116,0.2)';let c=p.paid?'#4a9e6e':p.day<today?'#ff6b6b':'#d4a574';return `<div class="payment-item"><div><strong>${p.name}</strong><br><small style="color:#666;">${p.day} число</small></div><div><strong>${p.amount.toLocaleString()} ₽</strong></div><span style="background:${bg};color:${c};padding:3px 8px;border-radius:8px;font-size:10px;">${txt}</span><button class="btn btn-sm" style="width:auto;padding:4px 8px;font-size:10px;" onclick="togPay(${p.id})">✓</button><button class="btn-delete" onclick="delPay(${p.id})">✕</button></div>`;}).join(''):'<div class="empty-state">Нет платежей</div>';
 
-            document.getElementById('transactionList').innerHTML=transactions.length?[...transactions].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(t=>{let icon='💰',cls='positive',sign='+';let tag=t.person==='Даня'?'<span class="transaction-person person-tag-danya" style="display:inline-block;padding:1px 6px;border-radius:6px;font-size:9px;background:rgba(74,158,255,0.2);color:#4a9eff;">Даня</span>':'<span class="transaction-person person-tag-kotya" style="display:inline-block;padding:1px 6px;border-radius:6px;font-size:9px;background:rgba(255,105,180,0.2);color:#ff69b4;">Котя</span>';if(t.type==='expense'){sign='-';cls='negative';icon={'еда':'🍜','одежда':'👘','транспорт':'🚃','прочие':'🗂️'}[t.category]||'📦';}else if(t.type==='savings'){sign='🔒';cls='savings-color';icon='🔗';}return `<div class="transaction-item"><div class="transaction-info"><div class="transaction-name">${icon} ${t.description} ${tag}</div><div class="transaction-meta">${fDate(t.date)}</div></div><div class="transaction-amount ${cls}">${sign} ${t.amount.toLocaleString()} ₽</div><button class="btn-delete" onclick="delTr(${t.id})">✕</button></div>`;}).join(''):'<div class="empty-state">Пусто</div>';
+            document.getElementById('transactionList').innerHTML=transactions.length?[...transactions].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(t=>{let icon='💰',cls='positive',sign='+';let tag=t.person==='Даня'?'<span style="display:inline-block;padding:1px 6px;border-radius:6px;font-size:9px;background:rgba(74,158,255,0.2);color:#4a9eff;">Даня</span>':'<span style="display:inline-block;padding:1px 6px;border-radius:6px;font-size:9px;background:rgba(255,105,180,0.2);color:#ff69b4;">Котя</span>';if(t.type==='expense'){sign='-';cls='negative';icon={'еда':'🍜','одежда':'👘','транспорт':'🚃','прочие':'🗂️'}[t.category]||'📦';}else if(t.type==='savings'){sign='🔒';cls='savings-color';icon='🔗';}return `<div class="transaction-item"><div class="transaction-info"><div class="transaction-name">${icon} ${t.description} ${tag}</div><div class="transaction-meta">${fDate(t.date)}</div></div><div class="transaction-amount ${cls}">${sign} ${t.amount.toLocaleString()} ₽</div><button class="btn-delete" onclick="delTr(${t.id})">✕</button></div>`;}).join(''):'<div class="empty-state">Пусто</div>';
 
             const cats={'еда':0,'одежда':0,'транспорт':0,'прочие':0};let totalExp=0;
             transactions.forEach(t=>{if(t.type==='expense'&&cats.hasOwnProperty(t.category)){cats[t.category]+=t.amount;totalExp+=t.amount;}});
             const maxCat=Math.max(...Object.values(cats),1);
             document.getElementById('analyticsContent').innerHTML=Object.entries(cats).map(([k,v])=>`<div class="category-bar"><div class="category-header"><span>${k==='еда'?'🍜':k==='одежда'?'👘':k==='транспорт'?'🚃':'🗂️'} ${k}</span><span>${v.toLocaleString()} ₽</span></div><div class="bar-container"><div class="bar-fill bar-${k==='еда'?'food':k==='одежда'?'clothes':k==='транспорт'?'transport':'other'}" style="width:${(v/maxCat*100)}%"></div></div></div>`).join('')+`<div style="text-align:right;margin-top:10px;padding-top:10px;border-top:1px solid #222;color:#888;">Всего: <strong style="color:#ff4444;">${totalExp.toLocaleString()} ₽</strong></div>`;
         }
-async function loadCloud() {
 
-    try {
-
-        document.getElementById('syncStatus').textContent =
-            '☁️ Загрузка из Firebase...';
-
-        const snap = await window.getDoc(
-    window.doc(window.db, "budget", "main")
-);
-
-        if (snap.exists()) {
-
-            const data = snap.data();
-
-            transactions = data.transactions || [];
-            savingsTotal = data.savingsTotal || 0;
-            goals = data.goals || [];
-            payments = data.payments || [];
-
-            document.getElementById('syncStatus').textContent =
-                '☁️ Данные загружены';
-        } else {
-
-            document.getElementById('syncStatus').textContent =
-                '☁️ Новая база';
-        }
-
-        updateUI();
-
-    } catch (e) {
-
-    console.error("FIREBASE ERROR:", e);
-
-    alert(
-        "Firebase ошибка:\n" +
-        e.message
-    );
-
-    document.getElementById('syncStatus').textContent =
-        '❌ Ошибка Firebase';
-}
-}
         document.addEventListener('keypress',e=>{if(e.key==='Enter'){const a=document.activeElement;if(a.id==='incomeAmount'||a.id==='incomeDescription')addIncome();else if(a.id==='expenseAmount'||a.id==='expenseDescription')addExpense();else if(a.id==='manualSavings')addSavings();else if(a.id==='goalName'||a.id==='goalAmount')addGoal();else if(a.id==='paymentName'||a.id==='paymentAmount'||a.id==='paymentDay')addPayment();}});
 
+        // ЗАПУСК
         loadCloud();
     </script>
 </body>
