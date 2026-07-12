@@ -244,13 +244,13 @@
         checkTodayPayments(); // ← ВОТ ЭТО ДОБАВИЛ
     } catch (e) { setSync('off', 'Ошибка: ' + e.message); }
 }
-        function checkTodayPayments() {
+function checkTodayPayments() {
     const today = new Date().getDate();
     const todayPayments = payments.filter(p => !p.paid && p.day === today);
     
     if (todayPayments.length > 0) {
-        const names = todayPayments.map(p => p.name + ' (' + p.amount.toLocaleString() + ' ₽)').join(', ');
-        toast('📅 Сегодня оплатить: ' + names);
+        const names = todayPayments.map(p => p.name + ' (' + p.amount.toLocaleString() + ' ₽)').join('\n');
+        alert('📅 Сегодня нужно оплатить:\n\n' + names);
     }
 }
 
