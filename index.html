@@ -4,6 +4,34 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Бюджет Дани и Коти | 支配の予算</title>
+    <script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc
+} from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyC1ffR-58S0v7jrcc-KMVF01nfZA4Hl8SU",
+  authDomain: "danila-4683f.firebaseapp.com",
+  projectId: "danila-4683f",
+  storageBucket: "danila-4683f.firebasestorage.app",
+  messagingSenderId: "762713634817",
+  appId: "1:762713634817:web:8a45f4dc82ca820fb6a800"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+        console.log("Firebase OK");
+console.log(firebaseConfig.projectId);
+
+window.db = db;
+window.doc = doc;
+window.getDoc = getDoc;
+window.setDoc = setDoc;
+</script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { --bg: #0a0a0a; --panel: #1a1a1a; --text: #e0e0e0; --accent: #c41e3a; --accent-light: #ff2d55; --gold: #d4a574; --white: #ffffff; --card-bg: #141414; --border: #2a2a2a; --success: #4a9e6e; --danger: #c41e3a; --danya: #4a9eff; --kotya: #ff69b4; }
@@ -166,19 +194,31 @@
     <div class="toast" id="toast"></div>
 
     <script>
-        let transactions = JSON.parse(localStorage.getItem('bt')||'[]');
-        let savingsTotal = parseFloat(localStorage.getItem('bs')||'0');
-        let goals = JSON.parse(localStorage.getItem('bg')||'[]');
-        let payments = JSON.parse(localStorage.getItem('bp')||'[]');
+let transactions = [];
+let savingsTotal = 0;
+let goals = [];
+let payments = [];
         let selIPerson = 'Даня', selEPerson = 'Даня';
         let pendingSavings = 0;
 
-        function save() {
-            localStorage.setItem('bt', JSON.stringify(transactions));
-            localStorage.setItem('bs', savingsTotal.toString());
-            localStorage.setItem('bg', JSON.stringify(goals));
-            localStorage.setItem('bp', JSON.stringify(payments));
-        }
+       async function save() {
+
+    const data = {
+        transactions,
+        savingsTotal,
+        goals,
+        payments,
+        updatedAt: Date.now()
+    };
+
+    await setDoc(
+        doc(db, "budget", "main"),
+        data
+    );
+
+    document.getElementById('syncStatus').textContent =
+        '☁️ Firebase синхронизирован';
+}
 
         function toast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); }
         function calcBal() { return transactions.reduce((s,t)=>t.type==='income'?s+t.amount:s-t.amount,0); }
