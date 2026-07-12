@@ -346,10 +346,47 @@ let payments = [];
             const maxCat=Math.max(...Object.values(cats),1);
             document.getElementById('analyticsContent').innerHTML=Object.entries(cats).map(([k,v])=>`<div class="category-bar"><div class="category-header"><span>${k==='еда'?'🍜':k==='одежда'?'👘':k==='транспорт'?'🚃':'🗂️'} ${k}</span><span>${v.toLocaleString()} ₽</span></div><div class="bar-container"><div class="bar-fill bar-${k==='еда'?'food':k==='одежда'?'clothes':k==='транспорт'?'transport':'other'}" style="width:${(v/maxCat*100)}%"></div></div></div>`).join('')+`<div style="text-align:right;margin-top:10px;padding-top:10px;border-top:1px solid #222;color:#888;">Всего: <strong style="color:#ff4444;">${totalExp.toLocaleString()} ₽</strong></div>`;
         }
+async function loadCloud() {
 
-        document.addEventListener('keypress',e=>{if(e.key==='Enter'){const a=document.activeElement;if(a.id==='incomeAmount'||a.id==='incomeDescription')addIncome();else if(a.id==='expenseAmount'||a.id==='expenseDescription')addExpense();else if(a.id==='manualSavings')addSavings();else if(a.id==='goalName'||a.id==='goalAmount')addGoal();else if(a.id==='paymentName'||a.id==='paymentAmount'||a.id==='paymentDay')addPayment();}});
+    try {
+
+        document.getElementById('syncStatus').textContent =
+            '☁️ Загрузка из Firebase...';
+
+        const snap = await getDoc(
+            doc(db, "budget", "main")
+        );
+
+        if (snap.exists()) {
+
+            const data = snap.data();
+
+            transactions = data.transactions || [];
+            savingsTotal = data.savingsTotal || 0;
+            goals = data.goals || [];
+            payments = data.payments || [];
+
+            document.getElementById('syncStatus').textContent =
+                '☁️ Данные загружены';
+        } else {
+
+            document.getElementById('syncStatus').textContent =
+                '☁️ Новая база';
+        }
 
         updateUI();
+
+    } catch (e) {
+
+        console.error(e);
+
+        document.getElementById('syncStatus').textContent =
+            '❌ Ошибка Firebase';
+    }
+}
+        document.addEventListener('keypress',e=>{if(e.key==='Enter'){const a=document.activeElement;if(a.id==='incomeAmount'||a.id==='incomeDescription')addIncome();else if(a.id==='expenseAmount'||a.id==='expenseDescription')addExpense();else if(a.id==='manualSavings')addSavings();else if(a.id==='goalName'||a.id==='goalAmount')addGoal();else if(a.id==='paymentName'||a.id==='paymentAmount'||a.id==='paymentDay')addPayment();}});
+
+        loadCloud();
     </script>
 </body>
 </html>
