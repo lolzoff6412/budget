@@ -8,7 +8,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --bg: #0a0a0a; --panel: #1a1a1a; --text: #e0e0e0; --accent: #c41e3a; --accent-light: #ff2d55; --gold: #d4a574; --white: #ffffff; --card-bg: #141414; --border: #2a2a2a; --success: #4a9e6e; --danger: #c41e3a; --danya: #4a9eff; --kotya: #ff69b4; }
+        :root { --bg: #0a0a0a; --panel: #1a1a1a; --text: #e0e0e0; --accent: #c41e3a; --gold: #d4a574; --white: #fff; --card-bg: #141414; --border: #2a2a2a; --success: #4a9e6e; --danger: #c41e3a; --danya: #4a9eff; --kotya: #ff69b4; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 20px; }
         .container { max-width: 1400px; margin: 0 auto; }
@@ -26,32 +26,19 @@
         @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
         .sync-text { font-size: 12px; color: #888; flex: 1; }
         
-        .reminders-bar { margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px; }
-        .reminder {
-            background: rgba(212,167,116,0.15); border: 1px solid var(--gold);
-            border-radius: 10px; padding: 15px; display: flex; align-items: center;
-            gap: 12px; animation: reminderPulse 3s infinite; cursor: pointer;
-        }
-        .reminder.urgent { background: rgba(196,30,58,0.2); border-color: var(--danger); animation: urgentPulse 1.5s infinite; }
-        @keyframes reminderPulse { 0%,100% { border-color: var(--gold); } 50% { border-color: var(--accent-light); } }
-        @keyframes urgentPulse { 0%,100% { border-color: var(--danger); } 50% { border-color: #ff6b6b; } }
-        .reminder-icon { font-size: 28px; }
-        .reminder-info { flex: 1; }
-        .reminder-title { font-weight: 600; font-size: 14px; }
-        .reminder-meta { font-size: 11px; color: #999; margin-top: 2px; }
-        .reminder-amount { font-weight: 700; font-size: 16px; color: var(--gold); }
-        .reminder.urgent .reminder-amount { color: #ff6b6b; }
-        .reminder-btn { padding: 8px 16px; border-radius: 8px; border: none; font-size: 12px; font-weight: 600; cursor: pointer; background: var(--gold); color: #000; }
-        .reminder-btn.danger { background: var(--danger); color: #fff; }
-
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px; }
         .stat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
         .stat-card.accent-card { background: linear-gradient(135deg, rgba(196,30,58,0.2) 0%, rgba(20,20,20,0.98) 100%); border-color: var(--accent); }
         .stat-icon { font-size: 24px; margin-bottom: 10px; }
         .stat-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; }
         .stat-value { font-size: 26px; font-weight: 700; color: var(--white); }
+        
+        .content-layout { display: grid; grid-template-columns: 1fr 350px; gap: 15px; margin-bottom: 20px; }
+        @media (max-width: 1000px) { .content-layout { grid-template-columns: 1fr; } }
+        
         .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
-        @media (max-width:768px) { .main-grid { grid-template-columns: 1fr; } .person-stats { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) { .main-grid { grid-template-columns: 1fr; } .person-stats { grid-template-columns: 1fr; } }
+        
         .panel { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
         .panel-title { font-size: 16px; font-weight: 600; color: var(--white); margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--border); }
         .form-group { margin-bottom: 15px; }
@@ -102,6 +89,31 @@
         .bar-container { height: 6px; background: #0a0a0a; border-radius: 3px; overflow: hidden; }
         .bar-fill { height: 100%; border-radius: 3px; }
         .bar-food { background: #ff6b6b; } .bar-clothes { background: #a29bfe; } .bar-transport { background: #74b9ff; } .bar-other { background: #636e72; }
+        
+        /* Календарь */
+        .calendar { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 15px; }
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .calendar-title { font-weight: 600; color: var(--white); font-size: 15px; }
+        .calendar-nav { background: none; border: 1px solid var(--border); color: #fff; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 16px; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+        .calendar-day-name { font-size: 10px; color: #666; padding: 5px 0; }
+        .calendar-day { padding: 8px 4px; border-radius: 6px; cursor: pointer; font-size: 13px; position: relative; transition: all 0.2s; }
+        .calendar-day:hover { background: rgba(255,255,255,0.05); }
+        .calendar-day.today { border: 2px solid var(--accent); font-weight: 700; }
+        .calendar-day.has-payment { background: rgba(212,167,116,0.2); }
+        .calendar-day.has-payment::after { content: ''; position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%); width: 5px; height: 5px; border-radius: 50%; background: var(--gold); }
+        .calendar-day.other-month { color: #444; }
+        .calendar-day.paid { background: rgba(74,158,110,0.2); }
+        .calendar-day.paid::after { background: var(--success); }
+        
+        .calendar-payments { margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border); }
+        .calendar-payment-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; font-size: 12px; border-bottom: 1px solid #1a1a1a; }
+        .calendar-payment-item:last-child { border-bottom: none; }
+        .calendar-payment-name { color: #ccc; }
+        .calendar-payment-amount { font-weight: 600; }
+        .calendar-payment-status { font-size: 10px; padding: 2px 6px; border-radius: 4px; }
+        .cp-paid { background: rgba(74,158,110,0.2); color: #4a9e6e; }
+        .cp-pending { background: rgba(212,167,116,0.2); color: #d4a574; }
     </style>
 </head>
 <body>
@@ -121,8 +133,6 @@
             <span class="sync-text" id="syncStatus">Загрузка...</span>
         </div>
 
-        <div class="reminders-bar" id="remindersBar"></div>
-
         <div class="stats-grid">
             <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-label">Общий баланс</div><div class="stat-value" id="totalBalance">0 ₽</div></div>
             <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-label">Дневной лимит</div><div class="stat-value" id="dailyBudget">0 ₽</div></div>
@@ -134,54 +144,66 @@
             <div class="person-card person-kotya"><div class="person-name" style="color:var(--kotya);">👤 Котя</div><div class="person-income">+<span id="kotyaIncome">0</span> ₽</div><div class="person-expense">-<span id="kotyaExpense">0</span> ₽</div></div>
         </div>
 
-        <div class="tabs">
-            <div class="tab active" onclick="switchTab('transactions')">💳 Операции</div>
-            <div class="tab" onclick="switchTab('analytics')">📊 Аналитика</div>
-            <div class="tab" onclick="switchTab('goals')">🎯 Цели</div>
-            <div class="tab" onclick="switchTab('payments')">📅 Платежи</div>
-        </div>
-
-        <div class="tab-content active" id="tab-transactions">
-            <div class="main-grid">
-                <div class="panel"><div class="panel-title">➕ Доход</div>
-                    <div class="person-selector"><div class="person-btn active-danya" id="ipDanya" onclick="selIP('Даня')">👤 Даня</div><div class="person-btn" id="ipKotya" onclick="selIP('Котя')">👤 Котя</div></div>
-                    <div class="form-group"><label>Сумма</label><input type="number" id="incomeAmount" placeholder="50000"></div>
-                    <div class="form-group"><label>Описание</label><input type="text" id="incomeDescription" placeholder="Зарплата..."></div>
-                    <button class="btn" onclick="addIncome()">Записать доход</button>
+        <div class="content-layout">
+            <div>
+                <div class="tabs">
+                    <div class="tab active" onclick="switchTab('transactions')">💳 Операции</div>
+                    <div class="tab" onclick="switchTab('analytics')">📊 Аналитика</div>
+                    <div class="tab" onclick="switchTab('goals')">🎯 Цели</div>
+                    <div class="tab" onclick="switchTab('payments')">📅 Платежи</div>
                 </div>
-                <div class="panel"><div class="panel-title">➖ Расход</div>
-                    <div class="person-selector"><div class="person-btn active-danya" id="epDanya" onclick="selEP('Даня')">👤 Даня</div><div class="person-btn" id="epKotya" onclick="selEP('Котя')">👤 Котя</div></div>
-                    <div class="form-group"><label>Сумма</label><input type="number" id="expenseAmount" placeholder="1500"></div>
-                    <div class="form-group"><label>Категория</label><select id="expenseCategory"><option value="еда">🍜 Еда</option><option value="одежда">👘 Одежда</option><option value="транспорт">🚃 Транспорт</option><option value="прочие">🗂️ Прочие</option></select></div>
-                    <div class="form-group"><label>Описание</label><input type="text" id="expenseDescription" placeholder="Что купили..."></div>
-                    <button class="btn" onclick="addExpense()">Записать расход</button>
-                    <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border);">
-                        <div class="form-group"><label>В копилку</label><input type="number" id="manualSavings" placeholder="5000"></div>
-                        <button class="btn btn-gold" onclick="addSavings()">🔗 В схрон</button>
+
+                <div class="tab-content active" id="tab-transactions">
+                    <div class="main-grid">
+                        <div class="panel"><div class="panel-title">➕ Доход</div>
+                            <div class="person-selector"><div class="person-btn active-danya" id="ipDanya" onclick="selIP('Даня')">👤 Даня</div><div class="person-btn" id="ipKotya" onclick="selIP('Котя')">👤 Котя</div></div>
+                            <div class="form-group"><label>Сумма</label><input type="number" id="incomeAmount" placeholder="50000"></div>
+                            <div class="form-group"><label>Описание</label><input type="text" id="incomeDescription" placeholder="Зарплата..."></div>
+                            <button class="btn" onclick="addIncome()">Записать доход</button>
+                        </div>
+                        <div class="panel"><div class="panel-title">➖ Расход</div>
+                            <div class="person-selector"><div class="person-btn active-danya" id="epDanya" onclick="selEP('Даня')">👤 Даня</div><div class="person-btn" id="epKotya" onclick="selEP('Котя')">👤 Котя</div></div>
+                            <div class="form-group"><label>Сумма</label><input type="number" id="expenseAmount" placeholder="1500"></div>
+                            <div class="form-group"><label>Категория</label><select id="expenseCategory"><option value="еда">🍜 Еда</option><option value="одежда">👘 Одежда</option><option value="транспорт">🚃 Транспорт</option><option value="прочие">🗂️ Прочие</option></select></div>
+                            <div class="form-group"><label>Описание</label><input type="text" id="expenseDescription" placeholder="Что купили..."></div>
+                            <button class="btn" onclick="addExpense()">Записать расход</button>
+                            <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border);">
+                                <div class="form-group"><label>В копилку</label><input type="number" id="manualSavings" placeholder="5000"></div>
+                                <button class="btn btn-gold" onclick="addSavings()">🔗 В схрон</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel"><div class="panel-title">📋 История</div><div class="transaction-list" id="transactionList"><div class="empty-state">Пусто</div></div></div>
+                </div>
+
+                <div class="tab-content" id="tab-analytics">
+                    <div class="panel"><div class="panel-title">📊 Расходы по категориям</div><div id="analyticsContent"></div></div>
+                </div>
+
+                <div class="tab-content" id="tab-goals">
+                    <div class="main-grid">
+                        <div class="panel"><div class="panel-title">🎯 Новая цель</div><div class="form-group"><label>Название</label><input type="text" id="goalName" placeholder="Отпуск..."></div><div class="form-group"><label>Сумма</label><input type="number" id="goalAmount" placeholder="100000"></div><button class="btn btn-gold" onclick="addGoal()">Добавить</button></div>
+                        <div class="panel"><div class="panel-title">🎯 Цели</div><div id="goalsList"><div class="empty-state">Нет целей</div></div></div>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="tab-payments">
+                    <div class="main-grid">
+                        <div class="panel"><div class="panel-title">📅 Новый платёж</div><div class="form-group"><label>Название</label><input type="text" id="paymentName" placeholder="Аренда..."></div><div class="form-group"><label>Сумма</label><input type="number" id="paymentAmount" placeholder="30000"></div><div class="form-group"><label>День</label><input type="number" id="paymentDay" placeholder="15" min="1" max="31"></div><button class="btn" onclick="addPayment()">Добавить</button></div>
+                        <div class="panel"><div class="panel-title">📋 Платежи</div><div id="paymentsList"><div class="empty-state">Нет платежей</div></div></div>
                     </div>
                 </div>
             </div>
-            <div class="panel"><div class="panel-title">📋 История</div><div class="transaction-list" id="transactionList"><div class="empty-state">Пусто</div></div></div>
-        </div>
 
-        <div class="tab-content" id="tab-analytics">
-            <div class="main-grid">
-                <div class="panel"><div class="panel-title">📊 Расходы по категориям</div><div id="analyticsContent"></div></div>
-                <div class="panel" style="display:flex;align-items:center;justify-content:center;"><div style="text-align:center;color:#666;"><div style="font-size:80px;">🐕</div><p>"Хороший пёс следит за финансами."</p><button class="btn btn-sm" style="margin-top:15px;" onclick="genPDF()">📄 PDF-отчёт</button></div></div>
-            </div>
-        </div>
-
-        <div class="tab-content" id="tab-goals">
-            <div class="main-grid">
-                <div class="panel"><div class="panel-title">🎯 Новая цель</div><div class="form-group"><label>Название</label><input type="text" id="goalName" placeholder="Отпуск..."></div><div class="form-group"><label>Сумма</label><input type="number" id="goalAmount" placeholder="100000"></div><button class="btn btn-gold" onclick="addGoal()">Добавить</button></div>
-                <div class="panel"><div class="panel-title">🎯 Цели</div><div id="goalsList"><div class="empty-state">Нет целей</div></div></div>
-            </div>
-        </div>
-
-        <div class="tab-content" id="tab-payments">
-            <div class="main-grid">
-                <div class="panel"><div class="panel-title">📅 Новый платёж</div><div class="form-group"><label>Название</label><input type="text" id="paymentName" placeholder="Аренда..."></div><div class="form-group"><label>Сумма</label><input type="number" id="paymentAmount" placeholder="30000"></div><div class="form-group"><label>День</label><input type="number" id="paymentDay" placeholder="15" min="1" max="31"></div><button class="btn" onclick="addPayment()">Добавить</button></div>
-                <div class="panel"><div class="panel-title">📋 Платежи</div><div id="paymentsList"><div class="empty-state">Нет платежей</div></div></div>
+            <!-- КАЛЕНДАРЬ -->
+            <div class="calendar" id="calendarPanel">
+                <div class="calendar-header">
+                    <button class="calendar-nav" onclick="changeMonth(-1)">◀</button>
+                    <div class="calendar-title" id="calendarTitle">Июль 2026</div>
+                    <button class="calendar-nav" onclick="changeMonth(1)">▶</button>
+                </div>
+                <div class="calendar-grid" id="calendarGrid"></div>
+                <div class="calendar-payments" id="calendarPayments"></div>
             </div>
         </div>
     </div>
@@ -202,8 +224,9 @@
 
         let transactions = [], savingsTotal = 0, goals = [], payments = [];
         let selIPerson = 'Даня', selEPerson = 'Даня';
+        let calendarMonth = new Date().getMonth();
+        let calendarYear = new Date().getFullYear();
 
-        // ============ ЗАГРУЗКА ============
         async function loadCloud() {
             setSync('load', 'Загрузка...');
             try {
@@ -215,17 +238,12 @@
                     goals = data.goals || [];
                     payments = data.payments || [];
                     setSync('on', 'Firebase ✅');
-                } else {
-                    setSync('on', 'Новая база');
-                }
+                } else { setSync('on', 'Новая база'); }
                 updateUI();
-                checkReminders();
-            } catch (e) {
-                setSync('off', 'Ошибка: ' + e.message);
-            }
+                renderCalendar();
+            } catch (e) { setSync('off', 'Ошибка: ' + e.message); }
         }
 
-        // ============ СОХРАНЕНИЕ ============
         async function saveCloud() {
             setSync('load', 'Сохранение...');
             try {
@@ -233,102 +251,87 @@
                     transactions, savingsTotal, goals, payments, updatedAt: Date.now()
                 });
                 setSync('on', 'Firebase ✅');
-            } catch (e) {
-                setSync('off', 'Ошибка: ' + e.message);
+            } catch (e) { setSync('off', 'Ошибка: ' + e.message); }
+        }
+
+        // ============ КАЛЕНДАРЬ ============
+        function changeMonth(delta) {
+            calendarMonth += delta;
+            if (calendarMonth < 0) { calendarMonth = 11; calendarYear--; }
+            if (calendarMonth > 11) { calendarMonth = 0; calendarYear++; }
+            renderCalendar();
+        }
+
+        function renderCalendar() {
+            const months = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+            document.getElementById('calendarTitle').textContent = months[calendarMonth] + ' ' + calendarYear;
+
+            const grid = document.getElementById('calendarGrid');
+            const dayNames = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+            let html = dayNames.map(d => `<div class="calendar-day-name">${d}</div>`).join('');
+
+            const firstDay = new Date(calendarYear, calendarMonth, 1);
+            const lastDay = new Date(calendarYear, calendarMonth + 1, 0);
+            const startDow = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1;
+            const today = new Date();
+            const todayDate = today.getDate();
+            const todayMonth = today.getMonth();
+            const todayYear = today.getFullYear();
+
+            // Дни предыдущего месяца
+            const prevLastDay = new Date(calendarYear, calendarMonth, 0).getDate();
+            for (let i = startDow - 1; i >= 0; i--) {
+                const day = prevLastDay - i;
+                html += `<div class="calendar-day other-month">${day}</div>`;
             }
-        }
 
-        // ============ НАПОМИНАНИЯ ============
-        function checkReminders() {
-            const today = new Date().getDate();
-            const remindersBar = document.getElementById('remindersBar');
-            let html = '';
+            // Дни текущего месяца
+            for (let day = 1; day <= lastDay.getDate(); day++) {
+                let classes = 'calendar-day';
+                if (day === todayDate && calendarMonth === todayMonth && calendarYear === todayYear) classes += ' today';
+                
+                const dayPayments = payments.filter(p => p.day === day && !p.paid);
+                const paidPayments = payments.filter(p => p.day === day && p.paid);
+                
+                if (dayPayments.length > 0) classes += ' has-payment';
+                if (paidPayments.length > 0 && dayPayments.length === 0) classes += ' paid';
+                
+                html += `<div class="${classes}" onclick="showDayPayments(${day})">${day}</div>`;
+            }
 
-            const activePayments = payments.filter(p => {
-                if (p.paid) return false;
-                const daysDiff = p.day - today;
-                return daysDiff >= -5 && daysDiff <= 31;
-            });
+            // Дни следующего месяца
+            const totalCells = startDow + lastDay.getDate();
+            const remaining = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+            for (let day = 1; day <= remaining; day++) {
+                html += `<div class="calendar-day other-month">${day}</div>`;
+            }
 
-            const todayPayments = activePayments.filter(p => p.day === today);
-            const tomorrowPayments = activePayments.filter(p => p.day === today + 1);
-            const soonPayments = activePayments.filter(p => p.day > today + 1 && p.day <= today + 3);
-            const overduePayments = activePayments.filter(p => p.day < today && p.day > 0);
-
-            overduePayments.forEach(p => {
-                html += `<div class="reminder urgent" onclick="switchTab('payments')">
-                    <div class="reminder-icon">🚨</div>
-                    <div class="reminder-info"><div class="reminder-title">Просрочен: ${p.name}</div><div class="reminder-meta">Был ${p.day} числа</div></div>
-                    <div class="reminder-amount">${p.amount.toLocaleString()} ₽</div>
-                    <button class="reminder-btn danger" onclick="event.stopPropagation(); markAsPaid('${p.id}')">✓ Оплатить</button>
-                </div>`;
-            });
-
-            todayPayments.forEach(p => {
-                html += `<div class="reminder" onclick="switchTab('payments')">
-                    <div class="reminder-icon">📅</div>
-                    <div class="reminder-info"><div class="reminder-title">Сегодня: ${p.name}</div><div class="reminder-meta">${p.day} число</div></div>
-                    <div class="reminder-amount">${p.amount.toLocaleString()} ₽</div>
-                    <button class="reminder-btn" onclick="event.stopPropagation(); markAsPaid('${p.id}')">✓ Оплатить</button>
-                </div>`;
-            });
-
-            tomorrowPayments.forEach(p => {
-                html += `<div class="reminder" onclick="switchTab('payments')" style="opacity:0.9;">
-                    <div class="reminder-icon">🔔</div>
-                    <div class="reminder-info"><div class="reminder-title">Завтра: ${p.name}</div><div class="reminder-meta">${p.day} число</div></div>
-                    <div class="reminder-amount">${p.amount.toLocaleString()} ₽</div>
-                </div>`;
-            });
-
-            soonPayments.forEach(p => {
-                html += `<div class="reminder" onclick="switchTab('payments')" style="opacity:0.7;">
-                    <div class="reminder-icon">💡</div>
-                    <div class="reminder-info"><div class="reminder-title">Скоро: ${p.name}</div><div class="reminder-meta">${p.day} число • Через ${p.day - today} дн.</div></div>
-                    <div class="reminder-amount">${p.amount.toLocaleString()} ₽</div>
-                </div>`;
-            });
-
-            remindersBar.innerHTML = html;
-
-            if (overduePayments.length > 0) toast('🚨 Просрочены: ' + overduePayments.map(p => p.name).join(', '));
-            else if (todayPayments.length > 0) toast('📅 Сегодня оплатить: ' + todayPayments.map(p => p.name).join(', '));
-        }
-
-        // ============ ОПЛАТИТЬ ============
-        async function markAsPaid(id) {
-            const p = payments.find(x => x.id === id);
-            if (!p) return;
+            grid.innerHTML = html;
             
-            const balance = calcBal();
-            if (p.amount > balance) {
-                toast('❌ Недостаточно средств! Баланс: ' + balance.toLocaleString() + ' ₽');
+            // Показываем платежи на сегодня
+            showDayPayments(todayDate);
+        }
+
+        function showDayPayments(day) {
+            const container = document.getElementById('calendarPayments');
+            const dayPayments = payments.filter(p => p.day === day);
+            
+            if (dayPayments.length === 0) {
+                container.innerHTML = `<div style="font-size:12px;color:#666;text-align:center;padding:10px;">Нет платежей на ${day} число</div>`;
                 return;
             }
             
-            const today = new Date();
-            const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
-            const lastDay = new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0).getDate();
-            const newDay = Math.min(p.day, lastDay);
-
-            payments.push({ id: Date.now().toString(), name: p.name, amount: p.amount, day: newDay, paid: false });
-            p.paid = true;
-            p.paidDate = today.toISOString();
-            
-            transactions.push({
-                id: Date.now().toString(), type: 'expense', amount: p.amount,
-                category: 'прочие', description: 'Оплата: ' + p.name,
-                person: 'Даня', date: today.toISOString()
-            });
-            
-            await saveCloud();
-            updateUI();
-            checkReminders();
-            switchTab('transactions');
-            toast('✅ «' + p.name + '» оплачен! -' + p.amount.toLocaleString() + ' ₽ | Следующий: ' + newDay + ' число');
+            container.innerHTML = `<div style="font-size:13px;font-weight:600;margin-bottom:10px;color:#ccc;">📅 Платежи на ${day} число:</div>` +
+                dayPayments.map(p => `
+                    <div class="calendar-payment-item">
+                        <span class="calendar-payment-name">${p.name}</span>
+                        <span class="calendar-payment-amount" style="color:${p.paid?'#4a9e6e':'#d4a574'}">${p.amount.toLocaleString()} ₽</span>
+                        <span class="calendar-payment-status ${p.paid?'cp-paid':'cp-pending'}">${p.paid?'Оплачен':'Ожидает'}</span>
+                    </div>
+                `).join('');
         }
 
-        // ============ ВСПОМОГАТЕЛЬНЫЕ ============
+        // ============ ОСТАЛЬНОЕ ============
         function setSync(s, t) { const d = document.getElementById('syncDot'); d.className = 'sync-dot' + (s === 'off' ? ' off' : s === 'load' ? ' load' : ''); document.getElementById('syncStatus').textContent = t; }
         function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3000); }
         function calcBal() { return transactions.reduce((s, t) => t.type === 'income' ? s + t.amount : s - t.amount, 0); }
@@ -338,7 +341,6 @@
         function selIP(p) { selIPerson = p; document.getElementById('ipDanya').className = 'person-btn' + (p === 'Даня' ? ' active-danya' : ''); document.getElementById('ipKotya').className = 'person-btn' + (p === 'Котя' ? ' active-kotya' : ''); }
         function selEP(p) { selEPerson = p; document.getElementById('epDanya').className = 'person-btn' + (p === 'Даня' ? ' active-danya' : ''); document.getElementById('epKotya').className = 'person-btn' + (p === 'Котя' ? ' active-kotya' : ''); }
 
-        // ============ ОПЕРАЦИИ ============
         async function addIncome() {
             const a = parseFloat(document.getElementById('incomeAmount').value);
             const d = document.getElementById('incomeDescription').value.trim() || 'Доход';
@@ -408,11 +410,11 @@
             if (!n || !a || !d || d < 1 || d > 31) return alert('Заполни!');
             payments.push({ id: Date.now().toString(), name: n, amount: a, day: d, paid: false });
             document.getElementById('paymentName').value = ''; document.getElementById('paymentAmount').value = ''; document.getElementById('paymentDay').value = '';
-            await saveCloud(); updateUI();
+            await saveCloud(); updateUI(); renderCalendar();
         }
 
-        async function togPay(id) { const p = payments.find(x => x.id === id); if (p) { p.paid = !p.paid; await saveCloud(); updateUI(); } }
-        async function delPay(id) { payments = payments.filter(x => x.id !== id); await saveCloud(); updateUI(); }
+        async function togPay(id) { const p = payments.find(x => x.id === id); if (p) { p.paid = !p.paid; await saveCloud(); updateUI(); renderCalendar(); } }
+        async function delPay(id) { payments = payments.filter(x => x.id !== id); await saveCloud(); updateUI(); renderCalendar(); }
 
         function switchTab(n) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -420,11 +422,6 @@
             const tabs = { 'transactions': 0, 'analytics': 1, 'goals': 2, 'payments': 3 };
             document.querySelectorAll('.tab')[tabs[n]].classList.add('active');
             document.getElementById('tab-' + n).classList.add('active');
-        }
-
-        function genPDF() {
-            try { const { jsPDF } = window.jspdf; const doc = new jsPDF(); doc.setFontSize(16); doc.setTextColor(196, 30, 58); doc.text('Budget Danya & Kotya', 20, 20); doc.save('budget_report.pdf'); toast('📄 Отчёт готов!'); }
-            catch (e) { alert('Нужен интернет для PDF'); }
         }
 
         function updateUI() {
@@ -449,8 +446,6 @@
             const maxCat = Math.max(...Object.values(cats), 1);
             document.getElementById('analyticsContent').innerHTML = Object.entries(cats).map(([k, v]) => `<div class="category-bar"><div class="category-header"><span>${k === 'еда' ? '🍜' : k === 'одежда' ? '👘' : k === 'транспорт' ? '🚃' : '🗂️'} ${k}</span><span>${v.toLocaleString()} ₽</span></div><div class="bar-container"><div class="bar-fill bar-${k === 'еда' ? 'food' : k === 'одежда' ? 'clothes' : k === 'транспорт' ? 'transport' : 'other'}" style="width:${(v / maxCat * 100)}%"></div></div></div>`).join('') + `<div style="text-align:right;margin-top:10px;padding-top:10px;border-top:1px solid #222;color:#888;">Всего: <strong style="color:#ff4444;">${totalExp.toLocaleString()} ₽</strong></div>`;
         }
-
-        document.addEventListener('keypress', e => { if (e.key === 'Enter') { const a = document.activeElement; if (a.id === 'incomeAmount' || a.id === 'incomeDescription') addIncome(); else if (a.id === 'expenseAmount' || a.id === 'expenseDescription') addExpense(); else if (a.id === 'manualSavings') addSavings(); else if (a.id === 'goalName' || a.id === 'goalAmount') addGoal(); else if (a.id === 'paymentName' || a.id === 'paymentAmount' || a.id === 'paymentDay') addPayment(); } });
 
         loadCloud();
     </script>
