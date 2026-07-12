@@ -227,22 +227,32 @@
         let calendarMonth = new Date().getMonth();
         let calendarYear = new Date().getFullYear();
 
-        async function loadCloud() {
-            setSync('load', 'Загрузка...');
-            try {
-                const snap = await db.collection('budgets').doc('main').get();
-                if (snap.exists) {
-                    const data = snap.data();
-                    transactions = data.transactions || [];
-                    savingsTotal = data.savingsTotal || 0;
-                    goals = data.goals || [];
-                    payments = data.payments || [];
-                    setSync('on', 'Firebase ✅');
-                } else { setSync('on', 'Новая база'); }
-                updateUI();
-                renderCalendar();
-            } catch (e) { setSync('off', 'Ошибка: ' + e.message); }
-        }
+    async function loadCloud() {
+    setSync('load', 'Загрузка...');
+    try {
+        const snap = await db.collection('budgets').doc('main').get();
+        if (snap.exists) {
+            const data = snap.data();
+            transactions = data.transactions || [];
+            savingsTotal = data.savingsTotal || 0;
+            goals = data.goals || [];
+            payments = data.payments || [];
+            setSync('on', 'Firebase ✅');
+        } else { setSync('on', 'Новая база'); }
+        updateUI();
+        renderCalendar();
+        checkTodayPayments(); // ← ВОТ ЭТО ДОБАВИЛ
+    } catch (e) { setSync('off', 'Ошибка: ' + e.message); }
+}
+        function checkTodayPayments() {
+    const today = new Date().getDate();
+    const todayPayments = payments.filter(p => !p.paid && p.day === today);
+    
+    if (todayPayments.length > 0) {
+        const names = todayPayments.map(p => p.name + ' (' + p.amount.toLocaleString() + ' ₽)').join(', ');
+        toast('📅 Сегодня оплатить: ' + names);
+    }
+}
 
         async function saveCloud() {
             setSync('load', 'Сохранение...');
