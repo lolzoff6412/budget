@@ -211,10 +211,10 @@ let payments = [];
         updatedAt: Date.now()
     };
 
-    await setDoc(
-        doc(db, "budget", "main"),
-        data
-    );
+await window.setDoc(
+    window.doc(window.db, "budget", "main"),
+    data
+);
 
     document.getElementById('syncStatus').textContent =
         '☁️ Firebase синхронизирован';
@@ -353,9 +353,9 @@ async function loadCloud() {
         document.getElementById('syncStatus').textContent =
             '☁️ Загрузка из Firebase...';
 
-        const snap = await getDoc(
-            doc(db, "budget", "main")
-        );
+        const snap = await window.getDoc(
+    window.doc(window.db, "budget", "main")
+);
 
         if (snap.exists()) {
 
