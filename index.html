@@ -237,7 +237,7 @@
             }
         }
 
-        // ============ НАПОМИНАНИЯ С АВТОПЕРЕНОСОМ ============
+        // ============ НАПОМИНАНИЯ ============
         function checkReminders() {
             const today = new Date().getDate();
             const remindersBar = document.getElementById('remindersBar');
@@ -286,7 +286,7 @@
                     <div class="reminder-icon">🔔</div>
                     <div class="reminder-info">
                         <div class="reminder-title">Завтра: ${p.name}</div>
-                        <div class="reminder-meta">${p.day} число • Подготовь ${p.amount.toLocaleString()} ₽</div>
+                        <div class="reminder-meta">${p.day} число</div>
                     </div>
                     <div class="reminder-amount">${p.amount.toLocaleString()} ₽</div>
                 </div>`;
@@ -313,61 +313,51 @@
             }
         }
 
-       async function markAsPaid(id) {
-    const p = payments.find(x => x.id === id);
-    if (!p) return;
-    
-    // Проверяем, хватает ли денег
-    const balance = calcBal();
-    if (p.amount > balance) {
-        toast('❌ Недостаточно средств! Баланс: ' + balance.toLocaleString() + ' ₽');
-        return;
-    }
-    
-    // Создаём новый платёж на следующий месяц
-    const today = new Date();
-    const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
-    const lastDay = new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0).getDate();
-    const newDay = Math.min(p.day, lastDay);
+        async function markAsPaid(id) {
+            const p = payments.find(x => x.id === id);
+            if (!p) return;
+            
+            const balance = calcBal();
+            if (p.amount > balance) {
+                toast('❌ Недостаточно средств! Баланс: ' + balance.toLocaleString() + ' ₽');
+                return;
+            }
+            
+            const today = new Date();
+            const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+            const lastDay = new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0).getDate();
+            const newDay = Math.min(p.day, lastDay);
 
-    payments.push({
-        id: Date.now().toString(),
-        name: p.name,
-        amount: p.amount,
-        day: newDay,
-        paid: false
-    });
+            // Новый платёж на следующий месяц
+            payments.push({
+                id: Date.now().toString(),
+                name: p.name,
+                amount: p.amount,
+                day: newDay,
+                paid: false
+            });
 
-    // Помечаем старый как оплаченный
-    p.paid = true;
-    p.paidDate = today.toISOString();
-    
-    // ДОБАВЛЯЕМ РАСХОД НА ЭТУ СУММУ
-    transactions.push({
-        id: Date.now().toString(),
-        type: 'expense',
-        amount: p.amount,
-        category: 'прочие',
-        description: 'Оплата: ' + p.name,
-        person: 'Даня',
-        date: today.toISOString()
-    });
-    
-    // Сохраняем
-    await saveCloud();
-    
-    // Обновляем ВСЁ
-    updateUI();
-    
-    // Перестраиваем напоминания
-    document.getElementById('remindersBar').innerHTML = '';
-    checkReminders();
-    
-    // Переключаем на вкладку операций, чтобы увидеть расход
-    switchTab('transactions');
-    
-    toast('✅ «' + p.name + '» оплачен! -' + p.amount.toLocaleString() + ' ₽ | Следующий: ' + newDay + ' число');
-}
+            // Старый — оплачен
+            p.paid = true;
+            p.paidDate = today.toISOString();
+            
+            // Расход
+            transactions.push({
+                id: Date.now().toString(),
+                type: 'expense',
+                amount: p.amount,
+                category: 'прочие',
+                description: 'Оплата: ' + p.name,
+                person: 'Даня',
+                date: today.toISOString()
+            });
+            
+            await saveCloud();
+            updateUI();
+            document.getElementById('remindersBar').innerHTML = '';
+            checkReminders();
+            switchTab('transactions');
+            toast('✅ «' + p.name + '» оплачен! -' + p.amount.toLocaleString() + ' ₽ | Следующий: ' + newDay + ' число');
         }
 
         function setSync(status, text) {
