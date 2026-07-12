@@ -231,13 +231,11 @@
                     transactions, savingsTotal, goals, payments, updatedAt: Date.now()
                 });
                 setSync('on', 'Firebase ✅');
-                checkReminders();
             } catch (e) {
                 setSync('off', 'Ошибка: ' + e.message);
             }
         }
 
-        // ============ НАПОМИНАНИЯ ============
         function checkReminders() {
             const today = new Date().getDate();
             const remindersBar = document.getElementById('remindersBar');
@@ -328,7 +326,6 @@
             const lastDay = new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0).getDate();
             const newDay = Math.min(p.day, lastDay);
 
-            // Новый платёж на следующий месяц
             payments.push({
                 id: Date.now().toString(),
                 name: p.name,
@@ -337,11 +334,9 @@
                 paid: false
             });
 
-            // Старый — оплачен
             p.paid = true;
             p.paidDate = today.toISOString();
             
-            // Расход
             transactions.push({
                 id: Date.now().toString(),
                 type: 'expense',
@@ -353,11 +348,9 @@
             });
             
             await saveCloud();
-            updateUI();
-            document.getElementById('remindersBar').innerHTML = '';
-            checkReminders();
-            switchTab('transactions');
             toast('✅ «' + p.name + '» оплачен! -' + p.amount.toLocaleString() + ' ₽ | Следующий: ' + newDay + ' число');
+            
+            setTimeout(() => location.reload(), 1000);
         }
 
         function setSync(status, text) {
