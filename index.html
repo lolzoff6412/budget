@@ -378,11 +378,16 @@ async function loadCloud() {
 
     } catch (e) {
 
-        console.error(e);
+    console.error("FIREBASE ERROR:", e);
 
-        document.getElementById('syncStatus').textContent =
-            '❌ Ошибка Firebase';
-    }
+    alert(
+        "Firebase ошибка:\n" +
+        e.message
+    );
+
+    document.getElementById('syncStatus').textContent =
+        '❌ Ошибка Firebase';
+}
 }
         document.addEventListener('keypress',e=>{if(e.key==='Enter'){const a=document.activeElement;if(a.id==='incomeAmount'||a.id==='incomeDescription')addIncome();else if(a.id==='expenseAmount'||a.id==='expenseDescription')addExpense();else if(a.id==='manualSavings')addSavings();else if(a.id==='goalName'||a.id==='goalAmount')addGoal();else if(a.id==='paymentName'||a.id==='paymentAmount'||a.id==='paymentDay')addPayment();}});
 
