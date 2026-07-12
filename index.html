@@ -26,7 +26,6 @@
         @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
         .sync-text { font-size: 12px; color: #888; flex: 1; }
         
-        /* Напоминания */
         .reminders-bar { margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px; }
         .reminder {
             background: rgba(212,167,116,0.15); border: 1px solid var(--gold);
@@ -122,7 +121,6 @@
             <span class="sync-text" id="syncStatus">Загрузка...</span>
         </div>
 
-        <!-- НАПОМИНАНИЯ О ПЛАТЕЖАХ -->
         <div class="reminders-bar" id="remindersBar"></div>
 
         <div class="stats-grid">
@@ -239,26 +237,23 @@
             }
         }
 
-        // ============ НАПОМИНАНИЯ ============
+        // ============ НАПОМИНАНИЯ С АВТОПЕРЕНОСОМ ============
         function checkReminders() {
             const today = new Date().getDate();
             const remindersBar = document.getElementById('remindersBar');
             let html = '';
 
-            // Проверяем сегодняшние платежи
             const todayPayments = payments.filter(p => !p.paid && p.day === today);
-            // Проверяем завтрашние платежи
             const tomorrowPayments = payments.filter(p => !p.paid && p.day === today + 1);
-            // Проверяем просроченные
-            const overduePayments = payments.filter(p => !p.paid && p.day < today && p.day > 0);
+            const soonPayments = payments.filter(p => !p.paid && p.day > today + 1 && p.day <= today + 3);
+            const overduePayments = payments.filter(p => !p.paid && p.day < today && p.day > 0 && p.day >= today - 5);
 
-            // Просроченные — красные
             overduePayments.forEach(p => {
                 html += `
                 <div class="reminder urgent" onclick="switchTab('payments')">
                     <div class="reminder-icon">🚨</div>
                     <div class="reminder-info">
-                        <div class="reminder-title">Просрочен платёж: ${p.name}</div>
+                        <div class="reminder-title">Просрочен: ${p.name}</div>
                         <div class="reminder-meta">Был ${p.day} числа • Пора оплатить!</div>
                     </div>
                     <div class="reminder-amount">${p.amount.toLocaleString()} ₽</div>
@@ -266,13 +261,12 @@
                 </div>`;
             });
 
-            // Сегодняшние — жёлтые
             todayPayments.forEach(p => {
                 html += `
                 <div class="reminder" onclick="switchTab('payments')">
                     <div class="reminder-icon">📅</div>
                     <div class="reminder-info">
-                        <div class="reminder-title">Сегодня платёж: ${p.name}</div>
+                        <div class="reminder-title">Сегодня: ${p.name}</div>
                         <div class="reminder-meta">${p.day} число • Не забудь оплатить!</div>
                     </div>
                     <div class="reminder-amount">${p.amount.toLocaleString()} ₽</div>
@@ -280,14 +274,25 @@
                 </div>`;
             });
 
-            // Завтрашние — предупреждение
             tomorrowPayments.forEach(p => {
                 html += `
-                <div class="reminder" onclick="switchTab('payments')" style="opacity:0.8;">
+                <div class="reminder" onclick="switchTab('payments')" style="opacity:0.9;">
                     <div class="reminder-icon">🔔</div>
                     <div class="reminder-info">
-                        <div class="reminder-title">Завтра платёж: ${p.name}</div>
+                        <div class="reminder-title">Завтра: ${p.name}</div>
                         <div class="reminder-meta">${p.day} число • Подготовь ${p.amount.toLocaleString()} ₽</div>
+                    </div>
+                    <div class="reminder-amount">${p.amount.toLocaleString()} ₽</div>
+                </div>`;
+            });
+
+            soonPayments.forEach(p => {
+                html += `
+                <div class="reminder" onclick="switchTab('payments')" style="opacity:0.7;">
+                    <div class="reminder-icon">💡</div>
+                    <div class="reminder-info">
+                        <div class="reminder-title">Скоро: ${p.name}</div>
+                        <div class="reminder-meta">${p.day} число • Через ${p.day - today} дн.</div>
                     </div>
                     <div class="reminder-amount">${p.amount.toLocaleString()} ₽</div>
                 </div>`;
@@ -295,22 +300,38 @@
 
             remindersBar.innerHTML = html;
 
-            // Если есть просроченные — показать toast
             if (overduePayments.length > 0) {
-                toast('🚨 Внимание! Есть просроченные платежи!');
+                toast('🚨 Просрочены: ' + overduePayments.map(p => p.name).join(', '));
             } else if (todayPayments.length > 0) {
-                toast('📅 Сегодня нужно оплатить: ' + todayPayments.map(p => p.name).join(', '));
+                toast('📅 Сегодня оплатить: ' + todayPayments.map(p => p.name).join(', '));
             }
         }
 
         async function markAsPaid(id) {
             const p = payments.find(x => x.id === id);
             if (p) {
+                // Создаём новый платёж на следующий месяц
+                const nextMonth = new Date();
+                nextMonth.setMonth(nextMonth.getMonth() + 1);
+                const lastDay = new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0).getDate();
+                const newDay = Math.min(p.day, lastDay);
+
+                payments.push({
+                    id: Date.now().toString(),
+                    name: p.name,
+                    amount: p.amount,
+                    day: newDay,
+                    paid: false
+                });
+
+                // Старый помечаем оплаченным
                 p.paid = true;
+                p.paidDate = new Date().toISOString();
+
                 await saveCloud();
                 updateUI();
                 checkReminders();
-                toast('✅ Платёж «' + p.name + '» отмечен как оплаченный');
+                toast('✅ «' + p.name + '» оплачен! Следующий — ' + newDay + ' число');
             }
         }
 
