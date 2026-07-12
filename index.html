@@ -91,7 +91,6 @@
         .bar-fill { height: 100%; border-radius: 3px; }
         .bar-food { background: #ff6b6b; } .bar-clothes { background: #a29bfe; } .bar-transport { background: #74b9ff; } .bar-other { background: #636e72; }
         
-        /* Календарь */
         .calendar { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 15px; }
         .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .calendar-title { font-weight: 600; color: var(--white); font-size: 15px; }
@@ -117,7 +116,6 @@
         .cp-paid { background: rgba(74,158,110,0.2); color: #4a9e6e; }
         .cp-pending { background: rgba(212,167,116,0.2); color: #d4a574; }
         
-        /* Модалка оплаты */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; }
         .modal-overlay.active { display: flex; }
         .modal-box { background: var(--panel); border: 1px solid var(--accent); border-radius: 16px; padding: 25px; max-width: 400px; width: 90%; }
@@ -208,7 +206,6 @@
                 </div>
             </div>
 
-            <!-- КАЛЕНДАРЬ -->
             <div class="calendar" id="calendarPanel">
                 <div class="calendar-header">
                     <button class="calendar-nav" onclick="changeMonth(-1)">◀</button>
@@ -221,7 +218,6 @@
         </div>
     </div>
 
-    <!-- Модалка оплаты -->
     <div class="modal-overlay" id="payModal">
         <div class="modal-box">
             <h3 id="payModalTitle">Оплатить</h3>
@@ -235,7 +231,6 @@
     <div class="toast" id="toast"></div>
 
     <script>
-        // ============ FIREBASE ============
         firebase.initializeApp({
             apiKey: "AIzaSyC1ffR-58S0v7jrcc-KMVF01nfZA4Hl8SU",
             authDomain: "danila-4683f.firebaseapp.com",
@@ -273,23 +268,23 @@
         async function saveCloud() {
             setSync('load', 'Сохранение...');
             try {
-                await db.collection('budgets').doc('main').set({
-                    transactions, savingsTotal, goals, payments, updatedAt: Date.now()
-                });
+                await db.collection('budgets').doc('main').set({ transactions, savingsTotal, goals, payments, updatedAt: Date.now() });
                 setSync('on', 'Firebase ✅');
             } catch (e) { setSync('off', 'Ошибка: ' + e.message); }
         }
 
         function checkTodayPayments() {
-            const today = new Date().getDate();
-            const todayPayments = payments.filter(p => !p.paid && p.day === today);
+            const today = new Date();
+            const todayDate = today.getDate();
+            const todayMonth = today.getMonth();
+            const todayYear = today.getFullYear();
+            const todayPayments = payments.filter(p => !p.paid && p.day === todayDate && p.month === todayMonth && p.year === todayYear);
             if (todayPayments.length > 0) {
                 const names = todayPayments.map(p => p.name + ' (' + p.amount.toLocaleString() + ' ₽)').join('\n');
                 alert('📅 Сегодня нужно оплатить:\n\n' + names);
             }
         }
 
-        // ============ КАЛЕНДАРЬ ============
         function changeMonth(delta) {
             calendarMonth += delta;
             if (calendarMonth < 0) { calendarMonth = 11; calendarYear--; }
@@ -322,8 +317,8 @@
                 let classes = 'calendar-day';
                 if (day === todayDate && calendarMonth === todayMonth && calendarYear === todayYear) classes += ' today';
                 
-                const dayPayments = payments.filter(p => p.day === day && !p.paid);
-                const paidPayments = payments.filter(p => p.day === day && p.paid);
+                const dayPayments = payments.filter(p => p.day === day && !p.paid && p.month === calendarMonth && p.year === calendarYear);
+                const paidPayments = payments.filter(p => p.day === day && p.paid && p.month === calendarMonth && p.year === calendarYear);
                 
                 if (dayPayments.length > 0) classes += ' has-payment';
                 if (paidPayments.length > 0 && dayPayments.length === 0) classes += ' paid';
@@ -343,7 +338,7 @@
 
         function showDayPayments(day) {
             const container = document.getElementById('calendarPayments');
-            const dayPayments = payments.filter(p => p.day === day);
+            const dayPayments = payments.filter(p => p.day === day && p.month === calendarMonth && p.year === calendarYear);
             
             if (dayPayments.length === 0) {
                 container.innerHTML = `<div style="font-size:12px;color:#666;text-align:center;padding:10px;">Нет платежей на ${day} число</div>`;
@@ -361,26 +356,20 @@
                 `).join('');
         }
 
-        // ============ МОДАЛКА ОПЛАТЫ ============
         function openPayModal(id) {
             const p = payments.find(x => x.id === id);
             if (!p) return;
             selectedPaymentId = id;
-            
             document.getElementById('payModalTitle').textContent = '💳 Оплатить: ' + p.name;
-            
-            // Варианты сумм
             const amounts = document.getElementById('payModalAmounts');
             const options = [
                 { label: 'Полная: ' + p.amount.toLocaleString() + ' ₽', value: p.amount },
                 { label: 'Половина: ' + Math.round(p.amount/2).toLocaleString() + ' ₽', value: Math.round(p.amount/2) },
                 { label: 'Минимум: ' + Math.round(p.amount*0.1).toLocaleString() + ' ₽', value: Math.round(p.amount*0.1) }
             ];
-            
             amounts.innerHTML = options.map((o, i) => 
                 `<div class="modal-amount-btn ${i===0?'selected':''}" onclick="selectAmount(${o.value}, this)">${o.label}</div>`
             ).join('');
-            
             document.getElementById('payModalCustom').value = '';
             document.getElementById('payModal').classList.add('active');
         }
@@ -391,22 +380,16 @@
             document.getElementById('payModalCustom').value = '';
         }
 
-        function closePayModal() {
-            document.getElementById('payModal').classList.remove('active');
-            selectedPaymentId = null;
-        }
+        function closePayModal() { document.getElementById('payModal').classList.remove('active'); selectedPaymentId = null; }
 
         async function confirmPay() {
             const p = payments.find(x => x.id === selectedPaymentId);
             if (!p) return;
             
-            // Определяем сумму
             const selectedBtn = document.querySelector('.modal-amount-btn.selected');
             let amount = selectedBtn ? parseFloat(selectedBtn.textContent.match(/[\d\s]+/)[0].replace(/\s/g, '')) : 0;
-            
             const customVal = parseFloat(document.getElementById('payModalCustom').value);
             if (customVal > 0) amount = customVal;
-            
             if (!amount || amount <= 0) return alert('Выбери или введи сумму!');
             
             const balance = calcBal();
@@ -415,13 +398,24 @@
                 return;
             }
             
-            // Если оплачена полная сумма — помечаем как оплаченный
             if (amount >= p.amount) {
                 p.paid = true;
                 p.paidDate = new Date().toISOString();
+                const now = new Date();
+                const nextMonth = now.getMonth() + 1;
+                const nextYear = nextMonth > 11 ? now.getFullYear() + 1 : now.getFullYear();
+                const actualNextMonth = nextMonth > 11 ? nextMonth - 12 : nextMonth;
+                payments.push({
+                    id: Date.now().toString(),
+                    name: p.name,
+                    amount: p.amount,
+                    day: p.day,
+                    month: actualNextMonth,
+                    year: nextYear,
+                    paid: false
+                });
             }
             
-            // Создаём расход
             transactions.push({
                 id: Date.now().toString(),
                 type: 'expense',
@@ -439,7 +433,6 @@
             toast('✅ Оплачено: ' + amount.toLocaleString() + ' ₽');
         }
 
-        // ============ ОСТАЛЬНОЕ ============
         function setSync(s, t) { const d = document.getElementById('syncDot'); d.className = 'sync-dot' + (s === 'off' ? ' off' : s === 'load' ? ' load' : ''); document.getElementById('syncStatus').textContent = t; }
         function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3000); }
         function calcBal() { return transactions.reduce((s, t) => t.type === 'income' ? s + t.amount : s - t.amount, 0); }
@@ -516,7 +509,8 @@
             const a = parseFloat(document.getElementById('paymentAmount').value);
             const d = parseInt(document.getElementById('paymentDay').value);
             if (!n || !a || !d || d < 1 || d > 31) return alert('Заполни!');
-            payments.push({ id: Date.now().toString(), name: n, amount: a, day: d, paid: false });
+            const now = new Date();
+            payments.push({ id: Date.now().toString(), name: n, amount: a, day: d, month: now.getMonth(), year: now.getFullYear(), paid: false });
             document.getElementById('paymentName').value = ''; document.getElementById('paymentAmount').value = ''; document.getElementById('paymentDay').value = '';
             await saveCloud(); updateUI(); renderCalendar();
         }
