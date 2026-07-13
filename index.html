@@ -41,7 +41,6 @@
         .limit-name { font-size: 14px; font-weight: 600; margin-bottom: 5px; }
         .limit-amount { font-size: 20px; font-weight: 700; }
         .limit-row { display: flex; justify-content: space-around; margin-top: 8px; font-size: 11px; color: #888; }
-        .limit-row span { display: block; }
 
         .content-layout { display: grid; grid-template-columns: 1fr 350px; gap: 15px; margin-bottom: 20px; }
         @media (max-width: 1000px) { .content-layout { grid-template-columns: 1fr; } }
@@ -162,18 +161,16 @@
         <div class="person-limits">
             <div class="limit-card limit-danya">
                 <div class="limit-name" style="color:var(--danya);">👤 Даня</div>
-                <div class="limit-amount" id="danyaDailyLimit" style="color:var(--danya);">0 ₽</div>
+                <div class="limit-amount" id="danyaDailyLimit" style="color:var(--danya);">0 ₽/день</div>
                 <div class="limit-row">
                     <span>Остаток: <strong id="danyaBalance">0 ₽</strong></span>
-                    <span>Дневной: <strong id="danyaDaily">0 ₽</strong></span>
                 </div>
             </div>
             <div class="limit-card limit-kotya">
                 <div class="limit-name" style="color:var(--kotya);">👤 Котя</div>
-                <div class="limit-amount" id="kotyaDailyLimit" style="color:var(--kotya);">0 ₽</div>
+                <div class="limit-amount" id="kotyaDailyLimit" style="color:var(--kotya);">0 ₽/день</div>
                 <div class="limit-row">
                     <span>Остаток: <strong id="kotyaBalance">0 ₽</strong></span>
-                    <span>Дневной: <strong id="kotyaDaily">0 ₽</strong></span>
                 </div>
             </div>
         </div>
@@ -275,7 +272,6 @@
         let calendarYear = new Date().getFullYear();
         let selectedPaymentId = null;
         const salaryDays = [10, 14, 25, 29];
-        let baseBudget = 0; // Базовый бюджет на период
 
         async function loadCloud() {
             setSync('load', 'Загрузка...');
@@ -287,7 +283,6 @@
                     savingsTotal = data.savingsTotal || 0;
                     goals = data.goals || [];
                     payments = data.payments || [];
-                    baseBudget = data.baseBudget || 0;
                     setSync('on', 'Firebase ✅');
                 } else { setSync('on', 'Новая база'); }
                 updateUI();
@@ -299,9 +294,7 @@
         async function saveCloud() {
             setSync('load', 'Сохранение...');
             try {
-                await db.collection('budgets').doc('main').set({ 
-                    transactions, savingsTotal, goals, payments, baseBudget, updatedAt: Date.now() 
-                });
+                await db.collection('budgets').doc('main').set({ transactions, savingsTotal, goals, payments, updatedAt: Date.now() });
                 setSync('on', 'Firebase ✅');
             } catch (e) { setSync('off', 'Ошибка: ' + e.message); }
         }
@@ -332,36 +325,25 @@
             return { days: Math.ceil((salaryDate - today) / 86400000), date: salaryDate };
         }
 
-        // ПРАВИЛЬНЫЙ РАСЧЁТ: фиксированная половина базового бюджета
         function getPersonLimits() {
+            const totalBalance = calcBal();
             const daysUntilSalary = getDaysUntilSalary().days;
+            const halfBalance = Math.floor(totalBalance / 2);
             
-            // Если базовый бюджет не установлен или был сброс — берём текущий баланс
-            if (baseBudget <= 0) {
-                baseBudget = calcBal();
-                saveCloud();
-            }
-            
-            const halfBase = Math.floor(baseBudget / 2);
-            
-            // Сколько каждый уже потратил
             let danyaSpent = 0, kotyaSpent = 0;
             transactions.forEach(t => {
-                if (t.type !== 'income') {
+                if (t.type === 'expense') {
                     if (t.person === 'Даня') danyaSpent += t.amount;
                     else if (t.person === 'Котя') kotyaSpent += t.amount;
                 }
             });
             
-            // Остаток каждого = половина базы - потрачено
-            const danyaBalance = Math.max(0, halfBase - danyaSpent);
-            const kotyaBalance = Math.max(0, halfBase - kotyaSpent);
-            
-            // Дневной лимит
+            const danyaBalance = Math.max(0, halfBalance - danyaSpent);
+            const kotyaBalance = Math.max(0, halfBalance - kotyaSpent);
             const danyaDaily = daysUntilSalary > 0 ? Math.floor(danyaBalance / daysUntilSalary) : danyaBalance;
             const kotyaDaily = daysUntilSalary > 0 ? Math.floor(kotyaBalance / daysUntilSalary) : kotyaBalance;
 
-            return { danyaDaily, kotyaDaily, danyaBalance, kotyaBalance, halfBase, daysUntilSalary };
+            return { danyaDaily, kotyaDaily, danyaBalance, kotyaBalance, halfBalance, daysUntilSalary };
         }
 
         function calcBal() { return transactions.reduce((s, t) => t.type === 'income' ? s + t.amount : s - t.amount, 0); }
@@ -404,19 +386,7 @@
                 <div class="calendar-payment-item"><span class="calendar-payment-name">${p.name}</span><span class="calendar-payment-amount" style="color:${p.paid?'#4a9e6e':'#d4a574'}">${p.amount.toLocaleString()} ₽</span><span class="calendar-payment-status ${p.paid?'cp-paid':'cp-pending'}">${p.paid?'Оплачен':'Ожидает'}</span>${!p.paid ? `<button class="btn btn-green" style="width:auto;padding:4px 10px;font-size:10px;margin:0;" onclick="event.stopPropagation(); openPayModal('${p.id}')">💳 Оплатить</button>` : ''}</div>`).join('') : `<div style="font-size:12px;color:#666;text-align:center;padding:10px;">Нет платежей на ${day} число</div>`;
         }
 
-        function openPayModal(id) {
-            const p = payments.find(x => x.id === id); if (!p) return;
-            selectedPaymentId = id;
-            document.getElementById('payModalTitle').textContent = '💳 Оплатить: ' + p.name;
-            document.getElementById('payModalAmounts').innerHTML = [
-                { label: 'Полная: ' + p.amount.toLocaleString() + ' ₽', value: p.amount },
-                { label: 'Половина: ' + Math.round(p.amount/2).toLocaleString() + ' ₽', value: Math.round(p.amount/2) },
-                { label: 'Минимум: ' + Math.round(p.amount*0.1).toLocaleString() + ' ₽', value: Math.round(p.amount*0.1) }
-            ].map((o,i) => `<div class="modal-amount-btn ${i===0?'selected':''}" onclick="selectAmount(${o.value}, this)">${o.label}</div>`).join('');
-            document.getElementById('payModalCustom').value = '';
-            document.getElementById('payModal').classList.add('active');
-        }
-
+        function openPayModal(id) { const p = payments.find(x => x.id === id); if (!p) return; selectedPaymentId = id; document.getElementById('payModalTitle').textContent = '💳 Оплатить: ' + p.name; document.getElementById('payModalAmounts').innerHTML = [{ label: 'Полная: ' + p.amount.toLocaleString() + ' ₽', value: p.amount },{ label: 'Половина: ' + Math.round(p.amount/2).toLocaleString() + ' ₽', value: Math.round(p.amount/2) },{ label: 'Минимум: ' + Math.round(p.amount*0.1).toLocaleString() + ' ₽', value: Math.round(p.amount*0.1) }].map((o,i) => `<div class="modal-amount-btn ${i===0?'selected':''}" onclick="selectAmount(${o.value}, this)">${o.label}</div>`).join(''); document.getElementById('payModalCustom').value = ''; document.getElementById('payModal').classList.add('active'); }
         function selectAmount(v, el) { document.querySelectorAll('.modal-amount-btn').forEach(b => b.classList.remove('selected')); el.classList.add('selected'); }
         function closePayModal() { document.getElementById('payModal').classList.remove('active'); selectedPaymentId = null; }
 
@@ -433,8 +403,7 @@
                 payments.push({ id: Date.now().toString(), name: p.name, amount: p.amount, day: p.day, month: nm > 11 ? nm - 12 : nm, year: ny, paid: false });
             }
             transactions.push({ id: Date.now().toString(), type: 'expense', amount, category: 'прочие', description: 'Оплата: ' + p.name + (amount < p.amount ? ' (частично)' : ''), person: 'Даня', date: new Date().toISOString() });
-            await saveCloud(); updateUI(); renderCalendar(); closePayModal();
-            toast('✅ Оплачено: ' + amount.toLocaleString() + ' ₽');
+            await saveCloud(); updateUI(); renderCalendar(); closePayModal(); toast('✅ Оплачено: ' + amount.toLocaleString() + ' ₽');
         }
 
         function setSync(s, t) { const d = document.getElementById('syncDot'); d.className = 'sync-dot' + (s === 'off' ? ' off' : s === 'load' ? ' load' : ''); document.getElementById('syncStatus').textContent = t; }
@@ -448,8 +417,6 @@
             const d = document.getElementById('incomeDescription').value.trim() || 'Доход';
             if (!a || a <= 0) return alert('Введи сумму!');
             transactions.push({ id: Date.now().toString(), type: 'income', amount: a, description: d, person: selIPerson, date: new Date().toISOString() });
-            // При новом доходе сбрасываем базовый бюджет (пересчитается при следующем просмотре)
-            baseBudget = 0;
             const s15 = Math.round(a * 0.15);
             if (s15 > 0 && confirm('Отложить ' + s15.toLocaleString() + ' ₽ (15%)?')) { transactions.push({ id: (Date.now() + 1).toString(), type: 'savings', amount: s15, description: 'Авто-накопление 15%', person: selIPerson, date: new Date().toISOString() }); savingsTotal += s15; }
             document.getElementById('incomeAmount').value = ''; document.getElementById('incomeDescription').value = '';
@@ -461,19 +428,13 @@
             const c = document.getElementById('expenseCategory').value;
             const d = document.getElementById('expenseDescription').value.trim() || 'Расход';
             if (!a || a <= 0) return alert('Введи сумму!');
-            if (a > calcBal()) return alert('❌ Недостаточно средств в общем бюджете!');
-            
+            if (a > calcBal()) return alert('❌ Недостаточно средств!');
             const limits = getPersonLimits();
             const personBalance = selEPerson === 'Даня' ? limits.danyaBalance : limits.kotyaBalance;
             const personDaily = selEPerson === 'Даня' ? limits.danyaDaily : limits.kotyaDaily;
             const personName = selEPerson === 'Даня' ? 'Дани' : 'Коти';
-            
-            if (a > personBalance) {
-                if (!confirm(`⚠️ У ${personName} недостаточно личного остатка!\n\nОстаток: ${personBalance.toLocaleString()} ₽\nРасход: ${a.toLocaleString()} ₽\n\nВсё равно записать?`)) return;
-            } else if (a > personDaily) {
-                if (!confirm(`⚠️ Расход превышает дневной лимит ${personName} (${personDaily.toLocaleString()} ₽)!\n\nПродолжить?`)) return;
-            }
-            
+            if (a > personBalance) { if (!confirm(`⚠️ У ${personName} недостаточно личного остатка (${personBalance.toLocaleString()} ₽)!\nВсё равно записать?`)) return; }
+            else if (a > personDaily) { if (!confirm(`⚠️ Расход превышает дневной лимит ${personName} (${personDaily.toLocaleString()} ₽)!\nПродолжить?`)) return; }
             transactions.push({ id: Date.now().toString(), type: 'expense', amount: a, category: c, description: d, person: selEPerson, date: new Date().toISOString() });
             document.getElementById('expenseAmount').value = ''; document.getElementById('expenseDescription').value = '';
             await saveCloud(); updateUI();
@@ -481,51 +442,28 @@
 
         async function addSavings() {
             const a = parseFloat(document.getElementById('manualSavings').value);
-            if (!a || a <= 0) return alert('Введи сумму!');
-            if (a > calcBal()) return alert('Недостаточно средств!');
+            if (!a || a <= 0) return alert('Введи сумму!'); if (a > calcBal()) return alert('Недостаточно средств!');
             transactions.push({ id: Date.now().toString(), type: 'savings', amount: a, description: 'Накопление', person: selEPerson, date: new Date().toISOString() });
-            savingsTotal += a; document.getElementById('manualSavings').value = '';
-            await saveCloud(); updateUI();
+            savingsTotal += a; document.getElementById('manualSavings').value = ''; await saveCloud(); updateUI();
         }
 
         async function delTr(id) {
             if (!confirm('Удалить?')) return;
             const t = transactions.find(x => x.id === id);
             if (t && t.type === 'savings') { savingsTotal -= t.amount; if (savingsTotal < 0) savingsTotal = 0; }
-            transactions = transactions.filter(x => x.id !== id);
-            await saveCloud(); updateUI();
+            transactions = transactions.filter(x => x.id !== id); await saveCloud(); updateUI();
         }
 
-        async function addGoal() {
-            const n = document.getElementById('goalName').value.trim(), a = parseFloat(document.getElementById('goalAmount').value);
-            if (!n || !a) return alert('Заполни!');
-            goals.push({ id: Date.now().toString(), name: n, target: a, saved: 0 });
-            document.getElementById('goalName').value = ''; document.getElementById('goalAmount').value = '';
-            await saveCloud(); updateUI();
-        }
-
-        async function addToGoal(id) {
-            const a = parseFloat(prompt('Сколько отложить?'));
-            if (!a || a <= 0) return;
-            const g = goals.find(x => x.id === id); if (!g) return;
-            if (a > calcBal()) return alert('Недостаточно средств!');
-            g.saved += a;
-            transactions.push({ id: Date.now().toString(), type: 'savings', amount: a, description: 'Цель: ' + g.name, person: 'Даня', date: new Date().toISOString() });
-            savingsTotal += a;
-            await saveCloud(); updateUI();
-        }
-
+        async function addGoal() { const n = document.getElementById('goalName').value.trim(), a = parseFloat(document.getElementById('goalAmount').value); if (!n || !a) return alert('Заполни!'); goals.push({ id: Date.now().toString(), name: n, target: a, saved: 0 }); document.getElementById('goalName').value = ''; document.getElementById('goalAmount').value = ''; await saveCloud(); updateUI(); }
+        async function addToGoal(id) { const a = parseFloat(prompt('Сколько отложить?')); if (!a || a <= 0) return; const g = goals.find(x => x.id === id); if (!g) return; if (a > calcBal()) return alert('Недостаточно средств!'); g.saved += a; transactions.push({ id: Date.now().toString(), type: 'savings', amount: a, description: 'Цель: ' + g.name, person: 'Даня', date: new Date().toISOString() }); savingsTotal += a; await saveCloud(); updateUI(); }
         async function delGoal(id) { goals = goals.filter(x => x.id !== id); await saveCloud(); updateUI(); }
 
         async function addPayment() {
             const n = document.getElementById('paymentName').value.trim(), a = parseFloat(document.getElementById('paymentAmount').value), d = parseInt(document.getElementById('paymentDay').value);
             if (!n || !a || !d || d < 1 || d > 31) return alert('Заполни!');
-            const now = new Date();
-            payments.push({ id: Date.now().toString(), name: n, amount: a, day: d, month: now.getMonth(), year: now.getFullYear(), paid: false });
-            document.getElementById('paymentName').value = ''; document.getElementById('paymentAmount').value = ''; document.getElementById('paymentDay').value = '';
-            await saveCloud(); updateUI(); renderCalendar();
+            payments.push({ id: Date.now().toString(), name: n, amount: a, day: d, month: new Date().getMonth(), year: new Date().getFullYear(), paid: false });
+            document.getElementById('paymentName').value = ''; document.getElementById('paymentAmount').value = ''; document.getElementById('paymentDay').value = ''; await saveCloud(); updateUI(); renderCalendar();
         }
-
         async function togPay(id) { const p = payments.find(x => x.id === id); if (p) { p.paid = !p.paid; await saveCloud(); updateUI(); renderCalendar(); } }
         async function delPay(id) { payments = payments.filter(x => x.id !== id); await saveCloud(); updateUI(); renderCalendar(); }
 
@@ -537,43 +475,33 @@
         }
 
         function updateUI() {
-            const bal = calcBal();
-            const salaryInfo = getDaysUntilSalary();
-            const limits = getPersonLimits();
-
+            const bal = calcBal(); const salaryInfo = getDaysUntilSalary(); const limits = getPersonLimits();
             document.getElementById('totalBalance').textContent = bal.toLocaleString() + ' ₽';
             document.getElementById('daysUntilSalary').textContent = salaryInfo.days + ' дн.';
             document.getElementById('dailyLimitLabel').textContent = 'До з/п ' + salaryInfo.date.getDate() + '.' + (salaryInfo.date.getMonth() + 1);
             document.getElementById('savingsAmount').textContent = savingsTotal.toLocaleString() + ' ₽';
-
             document.getElementById('danyaDailyLimit').textContent = limits.danyaDaily.toLocaleString() + ' ₽/день';
             document.getElementById('kotyaDailyLimit').textContent = limits.kotyaDaily.toLocaleString() + ' ₽/день';
             document.getElementById('danyaBalance').textContent = limits.danyaBalance.toLocaleString() + ' ₽';
             document.getElementById('kotyaBalance').textContent = limits.kotyaBalance.toLocaleString() + ' ₽';
-            document.getElementById('danyaDaily').textContent = limits.danyaDaily.toLocaleString() + ' ₽';
-            document.getElementById('kotyaDaily').textContent = limits.kotyaDaily.toLocaleString() + ' ₽';
 
             let di = 0, de = 0, ki = 0, ke = 0;
-            transactions.forEach(t => {
-                if (t.person === 'Даня') { if (t.type === 'income') di += t.amount; else de += t.amount; }
-                else { if (t.type === 'income') ki += t.amount; else ke += t.amount; }
-            });
+            transactions.forEach(t => { if (t.person === 'Даня') { if (t.type === 'income') di += t.amount; else de += t.amount; } else { if (t.type === 'income') ki += t.amount; else ke += t.amount; } });
             document.getElementById('danyaIncome').textContent = di.toLocaleString() + ' ₽';
             document.getElementById('danyaExpense').textContent = de.toLocaleString() + ' ₽';
             document.getElementById('kotyaIncome').textContent = ki.toLocaleString() + ' ₽';
             document.getElementById('kotyaExpense').textContent = ke.toLocaleString() + ' ₽';
 
-            document.getElementById('goalsList').innerHTML = goals.length ? goals.map(g => { const p = Math.min((g.saved / g.target) * 100, 100); const d = limits.danyaDaily > 0 ? Math.ceil((g.target - g.saved) / (limits.danyaDaily * 0.3)) : '∞'; return `<div class="goal-item"><div class="goal-header"><strong>🎯 ${g.name}</strong><span>${g.saved.toLocaleString()} / ${g.target.toLocaleString()} ₽</span></div><div class="goal-bar"><div class="goal-fill" style="width:${p}%"></div></div><div style="font-size:11px;color:#666;display:flex;justify-content:space-between;"><span>${Math.round(p)}%</span><span>~${d} дн.</span></div><button class="btn btn-gold btn-sm" style="margin-top:6px;" onclick="addToGoal('${g.id}')">+ Пополнить</button><button class="btn btn-sm" style="margin-top:4px;background:transparent;border:1px solid #333;color:#888;" onclick="delGoal('${g.id}')">Удалить</button></div>`; }).join('') : '<div class="empty-state">Нет целей</div>';
+            document.getElementById('goalsList').innerHTML = goals.length ? goals.map(g => { const p = Math.min((g.saved / g.target) * 100, 100); return `<div class="goal-item"><div class="goal-header"><strong>🎯 ${g.name}</strong><span>${g.saved.toLocaleString()} / ${g.target.toLocaleString()} ₽</span></div><div class="goal-bar"><div class="goal-fill" style="width:${p}%"></div></div><button class="btn btn-gold btn-sm" style="margin-top:6px;" onclick="addToGoal('${g.id}')">+ Пополнить</button></div>`; }).join('') : '<div class="empty-state">Нет целей</div>';
 
             const today = new Date().getDate();
-            document.getElementById('paymentsList').innerHTML = payments.length ? payments.sort((a, b) => a.day - b.day).map(p => { let cls = p.paid ? 'status-paid' : p.day < today ? 'status-overdue' : 'status-pending'; let txt = p.paid ? 'Оплачен' : p.day < today ? 'Просрочен' : 'Ожидает'; let bg = p.paid ? 'rgba(74,158,110,0.2)' : p.day < today ? 'rgba(196,30,58,0.2)' : 'rgba(212,167,116,0.2)'; let c = p.paid ? '#4a9e6e' : p.day < today ? '#ff6b6b' : '#d4a574'; return `<div class="payment-item"><div><strong>${p.name}</strong><br><small style="color:#666;">${p.day} число</small></div><div><strong>${p.amount.toLocaleString()} ₽</strong></div><span style="background:${bg};color:${c};padding:3px 8px;border-radius:8px;font-size:10px;">${txt}</span><button class="btn btn-sm" style="width:auto;padding:4px 8px;font-size:10px;" onclick="togPay('${p.id}')">✓</button><button class="btn-delete" onclick="delPay('${p.id}')">✕</button></div>`; }).join('') : '<div class="empty-state">Нет платежей</div>';
+            document.getElementById('paymentsList').innerHTML = payments.length ? payments.sort((a, b) => a.day - b.day).map(p => { let cls = p.paid ? 'status-paid' : p.day < today ? 'status-overdue' : 'status-pending'; let txt = p.paid ? 'Оплачен' : p.day < today ? 'Просрочен' : 'Ожидает'; return `<div class="payment-item"><div><strong>${p.name}</strong><br><small style="color:#666;">${p.day} число</small></div><div><strong>${p.amount.toLocaleString()} ₽</strong></div><span style="background:${p.paid?'rgba(74,158,110,0.2)':p.day<today?'rgba(196,30,58,0.2)':'rgba(212,167,116,0.2)'};color:${p.paid?'#4a9e6e':p.day<today?'#ff6b6b':'#d4a574'};padding:3px 8px;border-radius:8px;font-size:10px;">${txt}</span><button class="btn btn-sm" style="width:auto;padding:4px 8px;font-size:10px;" onclick="togPay('${p.id}')">✓</button></div>`; }).join('') : '<div class="empty-state">Нет платежей</div>';
 
             document.getElementById('transactionList').innerHTML = transactions.length ? [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date)).map(t => { let icon = '💰', cls = 'positive', sign = '+'; let tag = t.person === 'Даня' ? '<span style="display:inline-block;padding:1px 6px;border-radius:6px;font-size:9px;background:rgba(74,158,255,0.2);color:#4a9eff;">Даня</span>' : '<span style="display:inline-block;padding:1px 6px;border-radius:6px;font-size:9px;background:rgba(255,105,180,0.2);color:#ff69b4;">Котя</span>'; if (t.type === 'expense') { sign = '-'; cls = 'negative'; icon = { 'еда': '🍜', 'одежда': '👘', 'транспорт': '🚃', 'прочие': '🗂️' }[t.category] || '📦'; } else if (t.type === 'savings') { sign = '🔒'; cls = 'savings-color'; icon = '🔗'; } return `<div class="transaction-item"><div class="transaction-info"><div class="transaction-name">${icon} ${t.description} ${tag}</div><div class="transaction-meta">${fDate(t.date)}</div></div><div class="transaction-amount ${cls}">${sign} ${t.amount.toLocaleString()} ₽</div><button class="btn-delete" onclick="delTr('${t.id}')">✕</button></div>`; }).join('') : '<div class="empty-state">Пусто</div>';
 
             const cats = { 'еда': 0, 'одежда': 0, 'транспорт': 0, 'прочие': 0 }; let totalExp = 0;
             transactions.forEach(t => { if (t.type === 'expense' && cats.hasOwnProperty(t.category)) { cats[t.category] += t.amount; totalExp += t.amount; } });
-            const maxCat = Math.max(...Object.values(cats), 1);
-            document.getElementById('analyticsContent').innerHTML = Object.entries(cats).map(([k, v]) => `<div class="category-bar"><div class="category-header"><span>${k === 'еда' ? '🍜' : k === 'одежда' ? '👘' : k === 'транспорт' ? '🚃' : '🗂️'} ${k}</span><span>${v.toLocaleString()} ₽</span></div><div class="bar-container"><div class="bar-fill bar-${k === 'еда' ? 'food' : k === 'одежда' ? 'clothes' : k === 'транспорт' ? 'transport' : 'other'}" style="width:${(v / maxCat * 100)}%"></div></div></div>`).join('') + `<div style="text-align:right;margin-top:10px;padding-top:10px;border-top:1px solid #222;color:#888;">Всего: <strong style="color:#ff4444;">${totalExp.toLocaleString()} ₽</strong></div>`;
+            document.getElementById('analyticsContent').innerHTML = Object.entries(cats).map(([k, v]) => `<div class="category-bar"><div class="category-header"><span>${k === 'еда' ? '🍜' : k === 'одежда' ? '👘' : k === 'транспорт' ? '🚃' : '🗂️'} ${k}</span><span>${v.toLocaleString()} ₽</span></div><div class="bar-container"><div class="bar-fill bar-${k==='еда'?'food':k==='одежда'?'clothes':k==='транспорт'?'transport':'other'}" style="width:${Math.max(...Object.values(cats),1)>0?(v/Math.max(...Object.values(cats),1)*100):0}%"></div></div></div>`).join('') + `<div style="text-align:right;margin-top:10px;padding-top:10px;border-top:1px solid #222;color:#888;">Всего: <strong style="color:#ff4444;">${totalExp.toLocaleString()} ₽</strong></div>`;
         }
 
         loadCloud();
