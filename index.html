@@ -276,6 +276,10 @@
         let selectedPaymentId = null;
         const salaryDays = [10, 14, 25, 29];
 
+        // Для отслеживания перерасхода
+        let danyaOverspend = 0;
+        let kotyaOverspend = 0;
+
         async function loadCloud() {
             setSync('load', 'Загрузка...');
             try {
@@ -286,6 +290,8 @@
                     savingsTotal = data.savingsTotal || 0;
                     goals = data.goals || [];
                     payments = data.payments || [];
+                    danyaOverspend = data.danyaOverspend || 0;
+                    kotyaOverspend = data.kotyaOverspend || 0;
                     setSync('on', 'Firebase ✅');
                 } else { setSync('on', 'Новая база'); }
                 updateUI();
@@ -297,7 +303,11 @@
         async function saveCloud() {
             setSync('load', 'Сохранение...');
             try {
-                await db.collection('budgets').doc('main').set({ transactions, savingsTotal, goals, payments, updatedAt: Date.now() });
+                await db.collection('budgets').doc('main').set({ 
+                    transactions, savingsTotal, goals, payments, 
+                    danyaOverspend, kotyaOverspend,
+                    updatedAt: Date.now() 
+                });
                 setSync('on', 'Firebase ✅');
             } catch (e) { setSync('off', 'Ошибка: ' + e.message); }
         }
@@ -328,35 +338,24 @@
             return { days: Math.ceil((salaryDate - today) / 86400000), date: salaryDate };
         }
 
-        // ПРАВИЛЬНЫЙ РАСЧЁТ ПЕРСОНАЛЬНЫХ ЛИМИТОВ
+        // ПРАВИЛЬНЫЙ РАСЧЁТ: общий бюджет пополам
         function getPersonLimits() {
+            const totalBalance = calcBal();
+            const halfBalance = Math.floor(totalBalance / 2);
             const daysUntilSalary = getDaysUntilSalary().days;
             
-            // Считаем доходы и расходы каждого
-            let danyaIncome = 0, danyaExpense = 0, kotyaIncome = 0, kotyaExpense = 0;
-            transactions.forEach(t => {
-                if (t.person === 'Даня') {
-                    if (t.type === 'income') danyaIncome += t.amount;
-                    else danyaExpense += t.amount;
-                } else if (t.person === 'Котя') {
-                    if (t.type === 'income') kotyaIncome += t.amount;
-                    else kotyaExpense += t.amount;
-                }
-            });
-
-            // Общий бюджет делим пополам — это база каждого
-            const totalBalance = calcBal();
-            const halfBase = Math.round(totalBalance / 2);
+            // Базовый дневной лимит
+            const baseDaily = daysUntilSalary > 0 ? Math.floor(halfBalance / daysUntilSalary) : halfBalance;
             
-            // Остаток каждого = половина базы - его расходы + его доходы (сверх половины)
-            const danyaBalance = halfBase - danyaExpense + Math.max(0, danyaIncome - halfBase);
-            const kotyaBalance = halfBase - kotyaExpense + Math.max(0, kotyaIncome - halfBase);
+            // Вычитаем перерасход из дневного лимита
+            const danyaDaily = Math.max(0, baseDaily - danyaOverspend);
+            const kotyaDaily = Math.max(0, baseDaily - kotyaOverspend);
             
-            // Дневной лимит = остаток / дни до з/п
-            const danyaDaily = daysUntilSalary > 0 ? Math.round(Math.max(0, danyaBalance) / daysUntilSalary) : Math.max(0, danyaBalance);
-            const kotyaDaily = daysUntilSalary > 0 ? Math.round(Math.max(0, kotyaBalance) / daysUntilSalary) : Math.max(0, kotyaBalance);
+            // Остаток с учётом перерасхода
+            const danyaBalance = Math.max(0, halfBalance - danyaOverspend);
+            const kotyaBalance = Math.max(0, halfBalance - kotyaOverspend);
 
-            return { danyaBalance: Math.max(0, danyaBalance), kotyaBalance: Math.max(0, kotyaBalance), danyaDaily, kotyaDaily, daysUntilSalary };
+            return { danyaDaily, kotyaDaily, danyaBalance, kotyaBalance, halfBalance, daysUntilSalary };
         }
 
         function calcBal() { return transactions.reduce((s, t) => t.type === 'income' ? s + t.amount : s - t.amount, 0); }
@@ -448,6 +447,9 @@
             const d = document.getElementById('incomeDescription').value.trim() || 'Доход';
             if (!a || a <= 0) return alert('Введи сумму!');
             transactions.push({ id: Date.now().toString(), type: 'income', amount: a, description: d, person: selIPerson, date: new Date().toISOString() });
+            // Сбрасываем перерасходы при новом доходе
+            danyaOverspend = 0;
+            kotyaOverspend = 0;
             const s15 = Math.round(a * 0.15);
             if (s15 > 0 && confirm('Отложить ' + s15.toLocaleString() + ' ₽ (15%)?')) { transactions.push({ id: (Date.now() + 1).toString(), type: 'savings', amount: s15, description: 'Авто-накопление 15%', person: selIPerson, date: new Date().toISOString() }); savingsTotal += s15; }
             document.getElementById('incomeAmount').value = ''; document.getElementById('incomeDescription').value = '';
@@ -462,13 +464,21 @@
             if (a > calcBal()) return alert('❌ Недостаточно средств в общем бюджете!');
             
             const limits = getPersonLimits();
-            const personBalance = selEPerson === 'Даня' ? limits.danyaBalance : limits.kotyaBalance;
             const personDaily = selEPerson === 'Даня' ? limits.danyaDaily : limits.kotyaDaily;
+            const personBalance = selEPerson === 'Даня' ? limits.danyaBalance : limits.kotyaBalance;
+            const personName = selEPerson === 'Даня' ? 'Дани' : 'Коти';
             
-            if (a > personBalance) {
-                if (!confirm(`⚠️ У ${selEPerson === 'Даня' ? 'Дани' : 'Коти'} недостаточно личного остатка!\n\nОстаток: ${personBalance.toLocaleString()} ₽\nРасход: ${a.toLocaleString()} ₽\n\nВсё равно записать?`)) return;
-            } else if (a > personDaily) {
-                if (!confirm(`⚠️ Расход превышает дневной лимит ${selEPerson === 'Даня' ? 'Дани' : 'Коти'} (${personDaily.toLocaleString()} ₽)!\n\nПродолжить?`)) return;
+            // Проверка на превышение дневного лимита
+            if (a > personDaily) {
+                const overspend = a - personDaily;
+                if (!confirm(`⚠️ Расход превышает дневной лимит ${personName} (${personDaily.toLocaleString()} ₽) на ${overspend.toLocaleString()} ₽!\n\nЗавтра дневной лимит будет уменьшен на эту сумму.\n\nПродолжить?`)) return;
+                
+                // Запоминаем перерасход
+                if (selEPerson === 'Даня') {
+                    danyaOverspend += overspend;
+                } else {
+                    kotyaOverspend += overspend;
+                }
             }
             
             transactions.push({ id: Date.now().toString(), type: 'expense', amount: a, category: c, description: d, person: selEPerson, date: new Date().toISOString() });
@@ -549,6 +559,20 @@
             document.getElementById('kotyaBalance').textContent = limits.kotyaBalance.toLocaleString() + ' ₽';
             document.getElementById('danyaDaily').textContent = limits.danyaDaily.toLocaleString() + ' ₽';
             document.getElementById('kotyaDaily').textContent = limits.kotyaDaily.toLocaleString() + ' ₽';
+
+            // Подсказка о перерасходе
+            if (danyaOverspend > 0) {
+                document.getElementById('danyaDailyLimit').style.color = '#ff6b6b';
+                document.getElementById('danyaDailyLimit').textContent = limits.danyaDaily.toLocaleString() + ' ₽/день (перерасход: ' + danyaOverspend.toLocaleString() + ' ₽)';
+            } else {
+                document.getElementById('danyaDailyLimit').style.color = 'var(--danya)';
+            }
+            if (kotyaOverspend > 0) {
+                document.getElementById('kotyaDailyLimit').style.color = '#ff6b6b';
+                document.getElementById('kotyaDailyLimit').textContent = limits.kotyaDaily.toLocaleString() + ' ₽/день (перерасход: ' + kotyaOverspend.toLocaleString() + ' ₽)';
+            } else {
+                document.getElementById('kotyaDailyLimit').style.color = 'var(--kotya)';
+            }
 
             let di = 0, de = 0, ki = 0, ke = 0;
             transactions.forEach(t => {
