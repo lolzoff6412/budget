@@ -25,20 +25,20 @@
         .sync-dot.load { background: #ff0; animation: pulse 0.5s infinite; }
         @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
         .sync-text { font-size: 12px; color: #888; flex: 1; }
-        
+
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px; }
         .stat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
         .stat-card.accent-card { background: linear-gradient(135deg, rgba(196,30,58,0.2) 0%, rgba(20,20,20,0.98) 100%); border-color: var(--accent); }
         .stat-icon { font-size: 24px; margin-bottom: 10px; }
         .stat-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; }
         .stat-value { font-size: 26px; font-weight: 700; color: var(--white); }
-        
+
         .content-layout { display: grid; grid-template-columns: 1fr 350px; gap: 15px; margin-bottom: 20px; }
         @media (max-width: 1000px) { .content-layout { grid-template-columns: 1fr; } }
-        
+
         .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
         @media (max-width: 768px) { .main-grid { grid-template-columns: 1fr; } .person-stats { grid-template-columns: 1fr; } }
-        
+
         .panel { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
         .panel-title { font-size: 16px; font-weight: 600; color: var(--white); margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--border); }
         .form-group { margin-bottom: 15px; }
@@ -90,7 +90,7 @@
         .bar-container { height: 6px; background: #0a0a0a; border-radius: 3px; overflow: hidden; }
         .bar-fill { height: 100%; border-radius: 3px; }
         .bar-food { background: #ff6b6b; } .bar-clothes { background: #a29bfe; } .bar-transport { background: #74b9ff; } .bar-other { background: #636e72; }
-        
+
         .calendar { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 15px; }
         .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .calendar-title { font-weight: 600; color: var(--white); font-size: 15px; }
@@ -106,7 +106,7 @@
         .calendar-day.paid { background: rgba(74,158,110,0.2); }
         .calendar-day.paid::after { background: var(--success); }
         .calendar-day.selected { background: rgba(196,30,58,0.3); border: 1px solid var(--accent); }
-        
+
         .calendar-payments { margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border); }
         .calendar-payment-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; font-size: 12px; border-bottom: 1px solid #1a1a1a; flex-wrap: wrap; gap: 5px; }
         .calendar-payment-item:last-child { border-bottom: none; }
@@ -115,7 +115,7 @@
         .calendar-payment-status { font-size: 10px; padding: 2px 6px; border-radius: 4px; }
         .cp-paid { background: rgba(74,158,110,0.2); color: #4a9e6e; }
         .cp-pending { background: rgba(212,167,116,0.2); color: #d4a574; }
-        
+
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; }
         .modal-overlay.active { display: flex; }
         .modal-box { background: var(--panel); border: 1px solid var(--accent); border-radius: 16px; padding: 25px; max-width: 400px; width: 90%; }
@@ -146,7 +146,7 @@
 
         <div class="stats-grid">
             <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-label">Общий баланс</div><div class="stat-value" id="totalBalance">0 ₽</div></div>
-            <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-label">Дневной лимит</div><div class="stat-value" id="dailyBudget">0 ₽</div></div>
+            <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-label" id="dailyLimitLabel">Дневной лимит (до з/п)</div><div class="stat-value" id="dailyBudget">0 ₽</div></div>
             <div class="stat-card accent-card"><div class="stat-icon">🔗</div><div class="stat-label">Накопления</div><div class="stat-value" id="savingsAmount">0 ₽</div></div>
         </div>
 
@@ -247,6 +247,9 @@
         let calendarYear = new Date().getFullYear();
         let selectedPaymentId = null;
 
+        // Дни зарплат
+        const salaryDays = [10, 14, 25, 29];
+
         async function loadCloud() {
             setSync('load', 'Загрузка...');
             try {
@@ -283,6 +286,42 @@
                 const names = todayPayments.map(p => p.name + ' (' + p.amount.toLocaleString() + ' ₽)').join('\n');
                 alert('📅 Сегодня нужно оплатить:\n\n' + names);
             }
+        }
+
+        function getDaysUntilSalary() {
+            const today = new Date();
+            const todayDate = today.getDate();
+            const todayMonth = today.getMonth();
+            const todayYear = today.getFullYear();
+
+            // Ищем ближайшую зарплату в этом месяце
+            let nextSalaryDay = null;
+            for (let day of salaryDays.sort((a,b) => a - b)) {
+                if (day > todayDate) {
+                    nextSalaryDay = day;
+                    break;
+                }
+            }
+
+            // Если в этом месяце не нашли — первая зарплата следующего месяца
+            if (!nextSalaryDay) {
+                const firstDayNextMonth = new Date(todayYear, todayMonth + 1, 1);
+                const daysInNextMonth = new Date(todayYear, todayMonth + 2, 0).getDate();
+                for (let day of salaryDays.sort((a,b) => a - b)) {
+                    if (day <= daysInNextMonth) {
+                        nextSalaryDay = day;
+                        break;
+                    }
+                }
+                const lastDayThisMonth = new Date(todayYear, todayMonth + 1, 0).getDate();
+                const daysLeftThisMonth = lastDayThisMonth - todayDate;
+                return daysLeftThisMonth + nextSalaryDay; // дни до конца месяца + дни до зарплаты в следующем
+            }
+
+            // Разница в днях
+            const salaryDate = new Date(todayYear, todayMonth, nextSalaryDay);
+            const diffTime = salaryDate - today;
+            return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         }
 
         function changeMonth(delta) {
@@ -436,7 +475,6 @@
         function setSync(s, t) { const d = document.getElementById('syncDot'); d.className = 'sync-dot' + (s === 'off' ? ' off' : s === 'load' ? ' load' : ''); document.getElementById('syncStatus').textContent = t; }
         function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3000); }
         function calcBal() { return transactions.reduce((s, t) => t.type === 'income' ? s + t.amount : s - t.amount, 0); }
-        function getDays() { const n = new Date(); const l = new Date(n.getFullYear(), n.getMonth() + 1, 0); return Math.ceil((l - n) / 86400000) || 1; }
         function getStats() { let di = 0, de = 0, ki = 0, ke = 0; transactions.forEach(t => { if (t.person === 'Даня') { if (t.type === 'income') di += t.amount; else de += t.amount; } else { if (t.type === 'income') ki += t.amount; else ke += t.amount; } }); return { di, de, ki, ke }; }
         function fDate(d) { const dd = new Date(d); return dd.getDate() + '.' + (dd.getMonth() + 1) + ' ' + String(dd.getHours()).padStart(2, '0') + ':' + String(dd.getMinutes()).padStart(2, '0'); }
         function selIP(p) { selIPerson = p; document.getElementById('ipDanya').className = 'person-btn' + (p === 'Даня' ? ' active-danya' : ''); document.getElementById('ipKotya').className = 'person-btn' + (p === 'Котя' ? ' active-kotya' : ''); }
@@ -527,9 +565,14 @@
         }
 
         function updateUI() {
-            const bal = calcBal(); const days = getDays(); const daily = bal / days; const s = getStats();
+            const bal = calcBal();
+            const daysUntilSalary = getDaysUntilSalary();
+            const daily = daysUntilSalary > 0 ? bal / daysUntilSalary : bal;
+            const s = getStats();
+
             document.getElementById('totalBalance').textContent = bal.toLocaleString() + ' ₽';
             document.getElementById('dailyBudget').textContent = Math.round(daily).toLocaleString() + ' ₽';
+            document.getElementById('dailyLimitLabel').textContent = `Дневной лимит (до з/п, ${daysUntilSalary} дн.)`;
             document.getElementById('savingsAmount').textContent = savingsTotal.toLocaleString() + ' ₽';
             document.getElementById('danyaIncome').textContent = s.di.toLocaleString() + ' ₽';
             document.getElementById('danyaExpense').textContent = s.de.toLocaleString() + ' ₽';
