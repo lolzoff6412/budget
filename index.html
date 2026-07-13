@@ -158,15 +158,14 @@
             <div class="stat-card accent-card"><div class="stat-icon">🔗</div><div class="stat-label">Накопления</div><div class="stat-value" id="savingsAmount">0 ₽</div></div>
         </div>
 
-        <!-- ПЕРСОНАЛЬНЫЕ ЛИМИТЫ -->
         <div class="person-limits">
             <div class="limit-card limit-danya">
-                <div class="limit-name" style="color:var(--danya);">👤 Дневной лимит Дани</div>
+                <div class="limit-name" style="color:var(--danya);">👤 Лимит Дани (50% бюджета)</div>
                 <div class="limit-amount" id="danyaDailyLimit" style="color:var(--danya);">0 ₽</div>
                 <div class="limit-sub" id="danyaLimitSub"></div>
             </div>
             <div class="limit-card limit-kotya">
-                <div class="limit-name" style="color:var(--kotya);">👤 Дневной лимит Коти</div>
+                <div class="limit-name" style="color:var(--kotya);">👤 Лимит Коти (50% бюджета)</div>
                 <div class="limit-amount" id="kotyaDailyLimit" style="color:var(--kotya);">0 ₽</div>
                 <div class="limit-sub" id="kotyaLimitSub"></div>
             </div>
@@ -268,7 +267,6 @@
         let calendarMonth = new Date().getMonth();
         let calendarYear = new Date().getFullYear();
         let selectedPaymentId = null;
-
         const salaryDays = [10, 14, 25, 29];
 
         async function loadCloud() {
@@ -299,13 +297,9 @@
 
         function checkTodayPayments() {
             const today = new Date();
-            const todayDate = today.getDate();
-            const todayMonth = today.getMonth();
-            const todayYear = today.getFullYear();
-            const todayPayments = payments.filter(p => !p.paid && p.day === todayDate && p.month === todayMonth && p.year === todayYear);
+            const todayPayments = payments.filter(p => !p.paid && p.day === today.getDate() && p.month === today.getMonth() && p.year === today.getFullYear());
             if (todayPayments.length > 0) {
-                const names = todayPayments.map(p => p.name + ' (' + p.amount.toLocaleString() + ' ₽)').join('\n');
-                alert('📅 Сегодня нужно оплатить:\n\n' + names);
+                alert('📅 Сегодня нужно оплатить:\n\n' + todayPayments.map(p => p.name + ' (' + p.amount.toLocaleString() + ' ₽)').join('\n'));
             }
         }
 
@@ -314,205 +308,108 @@
             const todayDate = today.getDate();
             const todayMonth = today.getMonth();
             const todayYear = today.getFullYear();
-
-            let nextSalaryDay = null;
-            for (let day of salaryDays.sort((a,b) => a - b)) {
-                if (day > todayDate) { nextSalaryDay = day; break; }
+            let nextDay = null;
+            for (let d of [...salaryDays].sort((a,b)=>a-b)) { if (d > todayDate) { nextDay = d; break; } }
+            if (!nextDay) {
+                const nextMonth = new Date(todayYear, todayMonth + 1, 1);
+                const lastDay = new Date(todayYear, todayMonth + 2, 0).getDate();
+                for (let d of [...salaryDays].sort((a,b)=>a-b)) { if (d <= lastDay) { nextDay = d; break; } }
+                const daysLeft = new Date(todayYear, todayMonth + 1, 0).getDate() - todayDate;
+                return { days: daysLeft + nextDay, date: new Date(todayYear, todayMonth + 1, nextDay) };
             }
-
-            if (!nextSalaryDay) {
-                const firstDayNextMonth = new Date(todayYear, todayMonth + 1, 1);
-                const daysInNextMonth = new Date(todayYear, todayMonth + 2, 0).getDate();
-                for (let day of salaryDays.sort((a,b) => a - b)) {
-                    if (day <= daysInNextMonth) { nextSalaryDay = day; break; }
-                }
-                const lastDayThisMonth = new Date(todayYear, todayMonth + 1, 0).getDate();
-                const daysLeftThisMonth = lastDayThisMonth - todayDate;
-                return { days: daysLeftThisMonth + nextSalaryDay, date: new Date(todayYear, todayMonth + 1, nextSalaryDay) };
-            }
-
-            const salaryDate = new Date(todayYear, todayMonth, nextSalaryDay);
-            const diffTime = salaryDate - today;
-            return { days: Math.ceil(diffTime / (1000 * 60 * 60 * 24)), date: salaryDate };
+            const salaryDate = new Date(todayYear, todayMonth, nextDay);
+            return { days: Math.ceil((salaryDate - today) / 86400000), date: salaryDate };
         }
 
-        // Персональные лимиты
+        // ОБЩИЙ БЮДЖЕТ ДЕЛИМ ПОПОЛАМ
         function getPersonLimits() {
+            const totalBalance = calcBal();
+            const halfBalance = Math.round(totalBalance / 2);
             const daysUntilSalary = getDaysUntilSalary().days;
-            let danyaIncome = 0, danyaExpense = 0, kotyaIncome = 0, kotyaExpense = 0;
-            
-            transactions.forEach(t => {
-                if (t.person === 'Даня') {
-                    if (t.type === 'income') danyaIncome += t.amount;
-                    else danyaExpense += t.amount;
-                } else if (t.person === 'Котя') {
-                    if (t.type === 'income') kotyaIncome += t.amount;
-                    else kotyaExpense += t.amount;
-                }
-            });
-
-            const danyaBalance = danyaIncome - danyaExpense;
-            const kotyaBalance = kotyaIncome - kotyaExpense;
-            
-            return {
-                danya: daysUntilSalary > 0 ? Math.round(danyaBalance / daysUntilSalary) : danyaBalance,
-                kotya: daysUntilSalary > 0 ? Math.round(kotyaBalance / daysUntilSalary) : kotyaBalance,
-                danyaBalance,
-                kotyaBalance
-            };
+            const dailyLimit = daysUntilSalary > 0 ? Math.round(halfBalance / daysUntilSalary) : halfBalance;
+            return { danya: dailyLimit, kotya: dailyLimit, halfBalance, daysUntilSalary };
         }
 
-        function changeMonth(delta) {
-            calendarMonth += delta;
+        function calcBal() { return transactions.reduce((s, t) => t.type === 'income' ? s + t.amount : s - t.amount, 0); }
+
+        function changeMonth(d) {
+            calendarMonth += d;
             if (calendarMonth < 0) { calendarMonth = 11; calendarYear--; }
             if (calendarMonth > 11) { calendarMonth = 0; calendarYear++; }
             renderCalendar();
         }
 
         function renderCalendar() {
-            const months = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+            const months = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
             document.getElementById('calendarTitle').textContent = months[calendarMonth] + ' ' + calendarYear;
-
             const grid = document.getElementById('calendarGrid');
-            const dayNames = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-            let html = dayNames.map(d => `<div class="calendar-day-name">${d}</div>`).join('');
-
-            const firstDay = new Date(calendarYear, calendarMonth, 1);
-            const lastDay = new Date(calendarYear, calendarMonth + 1, 0);
-            const startDow = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1;
-            const today = new Date();
-            const todayDate = today.getDate();
-            const todayMonth = today.getMonth();
-            const todayYear = today.getFullYear();
-
-            const prevLastDay = new Date(calendarYear, calendarMonth, 0).getDate();
-            for (let i = startDow - 1; i >= 0; i--) {
-                html += `<div class="calendar-day other-month">${prevLastDay - i}</div>`;
+            let html = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map(d => `<div class="calendar-day-name">${d}</div>`).join('');
+            const first = new Date(calendarYear, calendarMonth, 1), last = new Date(calendarYear, calendarMonth + 1, 0);
+            const startDow = first.getDay() === 0 ? 6 : first.getDay() - 1;
+            const today = new Date(), td = today.getDate(), tm = today.getMonth(), ty = today.getFullYear();
+            for (let i = startDow - 1; i >= 0; i--) html += `<div class="calendar-day other-month">${new Date(calendarYear, calendarMonth, 0).getDate() - i}</div>`;
+            for (let d = 1; d <= last.getDate(); d++) {
+                let cls = 'calendar-day';
+                if (d === td && calendarMonth === tm && calendarYear === ty) cls += ' today';
+                const pending = payments.filter(p => p.day === d && !p.paid && p.month === calendarMonth && p.year === calendarYear);
+                const paid = payments.filter(p => p.day === d && p.paid && p.month === calendarMonth && p.year === calendarYear);
+                if (pending.length) cls += ' has-payment';
+                if (paid.length && !pending.length) cls += ' paid';
+                html += `<div class="${cls}" onclick="showDayPayments(${d})">${d}</div>`;
             }
-
-            for (let day = 1; day <= lastDay.getDate(); day++) {
-                let classes = 'calendar-day';
-                if (day === todayDate && calendarMonth === todayMonth && calendarYear === todayYear) classes += ' today';
-                
-                const dayPayments = payments.filter(p => p.day === day && !p.paid && p.month === calendarMonth && p.year === calendarYear);
-                const paidPayments = payments.filter(p => p.day === day && p.paid && p.month === calendarMonth && p.year === calendarYear);
-                
-                if (dayPayments.length > 0) classes += ' has-payment';
-                if (paidPayments.length > 0 && dayPayments.length === 0) classes += ' paid';
-                
-                html += `<div class="${classes}" onclick="showDayPayments(${day})">${day}</div>`;
-            }
-
-            const totalCells = startDow + lastDay.getDate();
-            const remaining = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
-            for (let day = 1; day <= remaining; day++) {
-                html += `<div class="calendar-day other-month">${day}</div>`;
-            }
-
+            const rem = (startDow + last.getDate()) % 7;
+            for (let d = 1; d <= (rem ? 7 - rem : 0); d++) html += `<div class="calendar-day other-month">${d}</div>`;
             grid.innerHTML = html;
-            showDayPayments(todayDate);
+            showDayPayments(td);
         }
 
         function showDayPayments(day) {
-            const container = document.getElementById('calendarPayments');
-            const dayPayments = payments.filter(p => p.day === day && p.month === calendarMonth && p.year === calendarYear);
-            
-            if (dayPayments.length === 0) {
-                container.innerHTML = `<div style="font-size:12px;color:#666;text-align:center;padding:10px;">Нет платежей на ${day} число</div>`;
-                return;
-            }
-            
-            container.innerHTML = `<div style="font-size:13px;font-weight:600;margin-bottom:10px;color:#ccc;">📅 ${day} число:</div>` +
-                dayPayments.map(p => `
-                    <div class="calendar-payment-item">
-                        <span class="calendar-payment-name">${p.name}</span>
-                        <span class="calendar-payment-amount" style="color:${p.paid?'#4a9e6e':'#d4a574'}">${p.amount.toLocaleString()} ₽</span>
-                        <span class="calendar-payment-status ${p.paid?'cp-paid':'cp-pending'}">${p.paid?'Оплачен':'Ожидает'}</span>
-                        ${!p.paid ? `<button class="btn btn-green" style="width:auto;padding:4px 10px;font-size:10px;margin:0;" onclick="event.stopPropagation(); openPayModal('${p.id}')">💳 Оплатить</button>` : ''}
-                    </div>
-                `).join('');
+            const c = document.getElementById('calendarPayments');
+            const items = payments.filter(p => p.day === day && p.month === calendarMonth && p.year === calendarYear);
+            c.innerHTML = items.length ? `<div style="font-size:13px;font-weight:600;margin-bottom:10px;color:#ccc;">📅 ${day} число:</div>` + items.map(p => `
+                <div class="calendar-payment-item">
+                    <span class="calendar-payment-name">${p.name}</span>
+                    <span class="calendar-payment-amount" style="color:${p.paid?'#4a9e6e':'#d4a574'}">${p.amount.toLocaleString()} ₽</span>
+                    <span class="calendar-payment-status ${p.paid?'cp-paid':'cp-pending'}">${p.paid?'Оплачен':'Ожидает'}</span>
+                    ${!p.paid ? `<button class="btn btn-green" style="width:auto;padding:4px 10px;font-size:10px;margin:0;" onclick="event.stopPropagation(); openPayModal('${p.id}')">💳 Оплатить</button>` : ''}
+                </div>`).join('') : `<div style="font-size:12px;color:#666;text-align:center;padding:10px;">Нет платежей на ${day} число</div>`;
         }
 
         function openPayModal(id) {
-            const p = payments.find(x => x.id === id);
-            if (!p) return;
+            const p = payments.find(x => x.id === id); if (!p) return;
             selectedPaymentId = id;
             document.getElementById('payModalTitle').textContent = '💳 Оплатить: ' + p.name;
-            const amounts = document.getElementById('payModalAmounts');
-            const options = [
+            document.getElementById('payModalAmounts').innerHTML = [
                 { label: 'Полная: ' + p.amount.toLocaleString() + ' ₽', value: p.amount },
                 { label: 'Половина: ' + Math.round(p.amount/2).toLocaleString() + ' ₽', value: Math.round(p.amount/2) },
                 { label: 'Минимум: ' + Math.round(p.amount*0.1).toLocaleString() + ' ₽', value: Math.round(p.amount*0.1) }
-            ];
-            amounts.innerHTML = options.map((o, i) => 
-                `<div class="modal-amount-btn ${i===0?'selected':''}" onclick="selectAmount(${o.value}, this)">${o.label}</div>`
-            ).join('');
+            ].map((o,i) => `<div class="modal-amount-btn ${i===0?'selected':''}" onclick="selectAmount(${o.value}, this)">${o.label}</div>`).join('');
             document.getElementById('payModalCustom').value = '';
             document.getElementById('payModal').classList.add('active');
         }
 
-        function selectAmount(val, el) {
-            document.querySelectorAll('.modal-amount-btn').forEach(b => b.classList.remove('selected'));
-            el.classList.add('selected');
-            document.getElementById('payModalCustom').value = '';
-        }
-
+        function selectAmount(v, el) { document.querySelectorAll('.modal-amount-btn').forEach(b => b.classList.remove('selected')); el.classList.add('selected'); document.getElementById('payModalCustom').value = ''; }
         function closePayModal() { document.getElementById('payModal').classList.remove('active'); selectedPaymentId = null; }
 
         async function confirmPay() {
-            const p = payments.find(x => x.id === selectedPaymentId);
-            if (!p) return;
-            
-            const selectedBtn = document.querySelector('.modal-amount-btn.selected');
-            let amount = selectedBtn ? parseFloat(selectedBtn.textContent.match(/[\d\s]+/)[0].replace(/\s/g, '')) : 0;
-            const customVal = parseFloat(document.getElementById('payModalCustom').value);
-            if (customVal > 0) amount = customVal;
+            const p = payments.find(x => x.id === selectedPaymentId); if (!p) return;
+            let amount = parseFloat(document.querySelector('.modal-amount-btn.selected')?.textContent.match(/[\d\s]+/)[0].replace(/\s/g, '')) || 0;
+            const custom = parseFloat(document.getElementById('payModalCustom').value);
+            if (custom > 0) amount = custom;
             if (!amount || amount <= 0) return alert('Выбери или введи сумму!');
-            
-            const balance = calcBal();
-            if (amount > balance) {
-                toast('❌ Недостаточно средств! Баланс: ' + balance.toLocaleString() + ' ₽');
-                return;
-            }
-            
+            if (amount > calcBal()) return toast('❌ Недостаточно средств!');
             if (amount >= p.amount) {
-                p.paid = true;
-                p.paidDate = new Date().toISOString();
-                const now = new Date();
-                const nextMonth = now.getMonth() + 1;
-                const nextYear = nextMonth > 11 ? now.getFullYear() + 1 : now.getFullYear();
-                const actualNextMonth = nextMonth > 11 ? nextMonth - 12 : nextMonth;
-                payments.push({
-                    id: Date.now().toString(),
-                    name: p.name,
-                    amount: p.amount,
-                    day: p.day,
-                    month: actualNextMonth,
-                    year: nextYear,
-                    paid: false
-                });
+                p.paid = true; p.paidDate = new Date().toISOString();
+                const now = new Date(), nm = now.getMonth() + 1, ny = nm > 11 ? now.getFullYear() + 1 : now.getFullYear();
+                payments.push({ id: Date.now().toString(), name: p.name, amount: p.amount, day: p.day, month: nm > 11 ? nm - 12 : nm, year: ny, paid: false });
             }
-            
-            transactions.push({
-                id: Date.now().toString(),
-                type: 'expense',
-                amount: amount,
-                category: 'прочие',
-                description: 'Оплата: ' + p.name + (amount < p.amount ? ' (частично)' : ''),
-                person: 'Даня',
-                date: new Date().toISOString()
-            });
-            
-            await saveCloud();
-            updateUI();
-            renderCalendar();
-            closePayModal();
+            transactions.push({ id: Date.now().toString(), type: 'expense', amount, category: 'прочие', description: 'Оплата: ' + p.name + (amount < p.amount ? ' (частично)' : ''), person: 'Даня', date: new Date().toISOString() });
+            await saveCloud(); updateUI(); renderCalendar(); closePayModal();
             toast('✅ Оплачено: ' + amount.toLocaleString() + ' ₽');
         }
 
         function setSync(s, t) { const d = document.getElementById('syncDot'); d.className = 'sync-dot' + (s === 'off' ? ' off' : s === 'load' ? ' load' : ''); document.getElementById('syncStatus').textContent = t; }
-        function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3000); }
-        function calcBal() { return transactions.reduce((s, t) => t.type === 'income' ? s + t.amount : s - t.amount, 0); }
+        function toast(m) { const t = document.getElementById('toast'); t.textContent = m; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3000); }
         function fDate(d) { const dd = new Date(d); return dd.getDate() + '.' + (dd.getMonth() + 1) + ' ' + String(dd.getHours()).padStart(2, '0') + ':' + String(dd.getMinutes()).padStart(2, '0'); }
         function selIP(p) { selIPerson = p; document.getElementById('ipDanya').className = 'person-btn' + (p === 'Даня' ? ' active-danya' : ''); document.getElementById('ipKotya').className = 'person-btn' + (p === 'Котя' ? ' active-kotya' : ''); }
         function selEP(p) { selEPerson = p; document.getElementById('epDanya').className = 'person-btn' + (p === 'Даня' ? ' active-danya' : ''); document.getElementById('epKotya').className = 'person-btn' + (p === 'Котя' ? ' active-kotya' : ''); }
@@ -533,21 +430,12 @@
             const c = document.getElementById('expenseCategory').value;
             const d = document.getElementById('expenseDescription').value.trim() || 'Расход';
             if (!a || a <= 0) return alert('Введи сумму!');
-            
-            // Проверка общего баланса
             if (a > calcBal()) return alert('❌ Недостаточно средств!');
-            
-            // Проверка персонального лимита
             const limits = getPersonLimits();
             const personLimit = selEPerson === 'Даня' ? limits.danya : limits.kotya;
-            const personBalance = selEPerson === 'Даня' ? limits.danyaBalance : limits.kotyaBalance;
-            
-            if (a > personBalance) {
-                if (!confirm(`⚠️ У ${selEPerson === 'Даня' ? 'Дани' : 'Коти'} недостаточно личных средств!\n\nЕго баланс: ${personBalance.toLocaleString()} ₽\nПотратить: ${a.toLocaleString()} ₽\n\nВсё равно записать расход?`)) return;
-            } else if (a > personLimit && a <= personBalance) {
+            if (a > personLimit && a <= limits.halfBalance) {
                 if (!confirm(`⚠️ Этот расход превышает дневной лимит ${selEPerson === 'Даня' ? 'Дани' : 'Коти'} (${personLimit.toLocaleString()} ₽)!\n\nПродолжить?`)) return;
             }
-            
             transactions.push({ id: Date.now().toString(), type: 'expense', amount: a, category: c, description: d, person: selEPerson, date: new Date().toISOString() });
             document.getElementById('expenseAmount').value = ''; document.getElementById('expenseDescription').value = '';
             await saveCloud(); updateUI();
@@ -571,8 +459,7 @@
         }
 
         async function addGoal() {
-            const n = document.getElementById('goalName').value.trim();
-            const a = parseFloat(document.getElementById('goalAmount').value);
+            const n = document.getElementById('goalName').value.trim(), a = parseFloat(document.getElementById('goalAmount').value);
             if (!n || !a) return alert('Заполни!');
             goals.push({ id: Date.now().toString(), name: n, target: a, saved: 0 });
             document.getElementById('goalName').value = ''; document.getElementById('goalAmount').value = '';
@@ -582,8 +469,7 @@
         async function addToGoal(id) {
             const a = parseFloat(prompt('Сколько отложить?'));
             if (!a || a <= 0) return;
-            const g = goals.find(x => x.id === id);
-            if (!g) return;
+            const g = goals.find(x => x.id === id); if (!g) return;
             if (a > calcBal()) return alert('Недостаточно средств!');
             g.saved += a;
             transactions.push({ id: Date.now().toString(), type: 'savings', amount: a, description: 'Цель: ' + g.name, person: 'Даня', date: new Date().toISOString() });
@@ -594,9 +480,7 @@
         async function delGoal(id) { goals = goals.filter(x => x.id !== id); await saveCloud(); updateUI(); }
 
         async function addPayment() {
-            const n = document.getElementById('paymentName').value.trim();
-            const a = parseFloat(document.getElementById('paymentAmount').value);
-            const d = parseInt(document.getElementById('paymentDay').value);
+            const n = document.getElementById('paymentName').value.trim(), a = parseFloat(document.getElementById('paymentAmount').value), d = parseInt(document.getElementById('paymentDay').value);
             if (!n || !a || !d || d < 1 || d > 31) return alert('Заполни!');
             const now = new Date();
             payments.push({ id: Date.now().toString(), name: n, amount: a, day: d, month: now.getMonth(), year: now.getFullYear(), paid: false });
@@ -610,8 +494,7 @@
         function switchTab(n) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            const tabs = { 'transactions': 0, 'analytics': 1, 'goals': 2, 'payments': 3 };
-            document.querySelectorAll('.tab')[tabs[n]].classList.add('active');
+            document.querySelectorAll('.tab')['transactions,analytics,goals,payments'.split(',').indexOf(n)].classList.add('active');
             document.getElementById('tab-' + n).classList.add('active');
         }
 
@@ -625,13 +508,11 @@
             document.getElementById('dailyLimitLabel').textContent = 'До з/п ' + salaryInfo.date.getDate() + '.' + (salaryInfo.date.getMonth() + 1);
             document.getElementById('savingsAmount').textContent = savingsTotal.toLocaleString() + ' ₽';
 
-            // Персональные лимиты
             document.getElementById('danyaDailyLimit').textContent = limits.danya.toLocaleString() + ' ₽';
             document.getElementById('kotyaDailyLimit').textContent = limits.kotya.toLocaleString() + ' ₽';
-            document.getElementById('danyaLimitSub').textContent = 'Баланс: ' + limits.danyaBalance.toLocaleString() + ' ₽ | ' + salaryInfo.days + ' дн. до з/п';
-            document.getElementById('kotyaLimitSub').textContent = 'Баланс: ' + limits.kotyaBalance.toLocaleString() + ' ₽ | ' + salaryInfo.days + ' дн. до з/п';
+            document.getElementById('danyaLimitSub').textContent = '½ бюджета: ' + limits.halfBalance.toLocaleString() + ' ₽ | ' + salaryInfo.days + ' дн. до з/п';
+            document.getElementById('kotyaLimitSub').textContent = '½ бюджета: ' + limits.halfBalance.toLocaleString() + ' ₽ | ' + salaryInfo.days + ' дн. до з/п';
 
-            // Статистика по людям
             let di = 0, de = 0, ki = 0, ke = 0;
             transactions.forEach(t => {
                 if (t.person === 'Даня') { if (t.type === 'income') di += t.amount; else de += t.amount; }
